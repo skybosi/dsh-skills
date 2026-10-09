@@ -1,0 +1,11 @@
+{
+ "id": "calc-ch3-f01",
+ "type": "surface3d",
+ "output": "out/calc-ch3-f01.svg",
+ "params": {
+  "title": "二元函数 z=x²+y² 的等高线图（碗形曲面）",
+  "xlabel": "x",
+  "ylabel": "y",
+  "func": "X**2 + Y**2"
+ }
+}

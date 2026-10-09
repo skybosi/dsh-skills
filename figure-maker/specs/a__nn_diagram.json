@@ -1,0 +1,7 @@
+{
+ "id": "nn-ch2-fig01",
+ "type": "nn_diagram",
+ "output": "out/nn-ch2-fig01.svg",
+ "title": "MLP 三层全连接网络结构",
+ "mmd": "%%{init: {\n  'theme': 'base',\n  'themeVariables': {\n    'fontFamily': 'system-ui, -apple-system, \"Noto Sans SC\", \"PingFang SC\", sans-serif',\n    'fontSize': '14px',\n    'lineColor': '#6B7280',\n    'primaryTextColor': '#212529'\n  },\n  'flowchart': {\n    'nodeSpacing': 24,\n    'rankSpacing': 28,\n    'curve': 'linear',\n    'padding': 12\n  }\n}}%%\nflowchart TD\nl0(\"输入层<br/>x1~x4\")\n    l1(\"隐藏层1<br/>5 个神经元\")\n    l2(\"隐藏层2<br/>3 个神经元\")\n    l3(\"输出层<br/>y1, y2\")\n    l0 --> l1\n    l1 --> l2\n    l2 --> l3\n\n    classDef neutral fill:#F8FBFF,stroke:#93C5FD,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n    classDef root fill:#E9D5FF,stroke:#C4B5FD,stroke-width:1.5px,color:#212529,rx:6,ry:6,font-weight:bold;\n    classDef category fill:#DBEAFE,stroke:#93C5FD,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n    classDef leaf fill:#F1F3F5,stroke:#ADB5BD,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n    classDef input fill:#FBE4D5,stroke:#E9B08A,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n    classDef output fill:#D1FAE5,stroke:#86EFAC,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n    classDef warning fill:#FEF3C7,stroke:#FCD34D,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n    classDef error fill:#FECACA,stroke:#F87171,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n\n    class l0 input;\n    class l3 output;\n    class l1,l2 leaf;\n\n    linkStyle default stroke:#6B7280,stroke-width:1.5px;\n"
+}

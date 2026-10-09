@@ -1,0 +1,13 @@
+{
+ "id": "calc-ch2-f03",
+ "type": "differential",
+ "output": "out/calc-ch2-f03.svg",
+ "params": {
+  "title": "微分 dy 与增量 Delta y——线性近似",
+  "xlabel": "x",
+  "ylabel": "y",
+  "func": "x**2 + 0.5",
+  "x0": 1.2,
+  "dx": 0.7
+ }
+}

@@ -1,0 +1,30 @@
+{
+ "id": "lft-ch5-f01",
+ "type": "matrix",
+ "output": "out/lft-ch5-f01.svg",
+ "params": {
+  "title": "Instruction data formats: field structure and three common formats",
+  "data": [
+   [
+    "Format",
+    "Fields",
+    "Key Characteristics"
+   ],
+   [
+    "Alpaca",
+    "instruction / input / output",
+    "Three flat fields, simple"
+   ],
+   [
+    "ShareGPT",
+    "conversations: [{from, value}]",
+    "Multi-turn, speaker labels"
+   ],
+   [
+    "OpenAI Chat",
+    "messages: [{role, content}]",
+    "Roles: system/user/assistant"
+   ]
+  ]
+ }
+}

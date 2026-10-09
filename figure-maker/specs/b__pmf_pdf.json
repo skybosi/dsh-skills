@@ -1,0 +1,10 @@
+{
+ "id": "probability--ch2-fig02",
+ "type": "pmf_pdf",
+ "output": "out/probability--ch2-fig02.svg",
+ "params": {
+  "title": "PMF（离散，柱高之和=1） vs PDF（连续，面积=1）",
+  "n": 6,
+  "p": 0.5
+ }
+}

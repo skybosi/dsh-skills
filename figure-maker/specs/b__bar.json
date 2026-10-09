@@ -1,0 +1,21 @@
+{
+ "id": "lft-ch3-f02",
+ "type": "bar",
+ "output": "out/lft-ch3-f02.svg",
+ "params": {
+  "title": "Trainable parameter ratio by LoRA rank r",
+  "values": [
+   0.5,
+   1.0,
+   1.8,
+   2.8
+  ],
+  "labels": [
+   "r=4",
+   "r=8",
+   "r=16",
+   "r=64"
+  ],
+  "ylabel": "Trainable parameters (% of total)"
+ }
+}

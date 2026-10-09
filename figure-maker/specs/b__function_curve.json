@@ -1,0 +1,13 @@
+{
+ "id": "lft-ch1-f03",
+ "type": "function_curve",
+ "output": "out/lft-ch1-f03.svg",
+ "params": {
+  "title": "Finetuning vs Prompting trade-off curve",
+  "func": "1 - exp(-x/3)",
+  "x_min": 0,
+  "x_max": 10,
+  "xlabel": "Stability / Reproducibility",
+  "ylabel": "Iteration / Maintenance Cost"
+ }
+}

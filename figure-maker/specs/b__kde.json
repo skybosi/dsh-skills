@@ -1,0 +1,22 @@
+{
+ "id": "data-visuali-ch3-fig04",
+ "type": "kde",
+ "output": "out/data-visuali-ch3-fig04.svg",
+ "params": {
+  "title": "双峰分布的核密度估计（300×N(0,1) + 200×N(3,1.2)）",
+  "xlabel": "取值",
+  "ylabel": "密度",
+  "curves": [
+   {
+    "mean": 0,
+    "std": 1,
+    "weight": 300
+   },
+   {
+    "mean": 3,
+    "std": 1.2,
+    "weight": 200
+   }
+  ]
+ }
+}

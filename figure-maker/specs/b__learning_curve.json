@@ -1,0 +1,52 @@
+{
+ "id": "attention-transformer-ch6-fig02",
+ "type": "learning_curve",
+ "output": "out/attention-transformer-ch6-fig02.svg",
+ "params": {
+  "title": "序列反转任务训练 Loss 曲线",
+  "train": [
+   4.5,
+   3.8,
+   3.0,
+   2.2,
+   1.5,
+   0.9,
+   0.5,
+   0.3,
+   0.15,
+   0.08,
+   0.04,
+   0.02
+  ],
+  "valid": [
+   4.6,
+   3.9,
+   3.2,
+   2.5,
+   1.8,
+   1.2,
+   0.8,
+   0.5,
+   0.35,
+   0.25,
+   0.18,
+   0.15
+  ],
+  "x": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12
+  ],
+  "xlabel": "Epoch",
+  "ylabel": "Loss"
+ }
+}

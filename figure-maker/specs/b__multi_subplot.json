@@ -1,0 +1,38 @@
+{
+ "id": "ts-ch1-f02",
+ "type": "multi_subplot",
+ "output": "out/ts-ch1-f02.svg",
+ "params": {
+  "title": "平稳序列与随机游走对比",
+  "panels": [
+   {
+    "func": "sin(0.4*x) + 0.3*sin(1.2*x)",
+    "x_min": 0,
+    "x_max": 30,
+    "title": "平稳序列：均值回归，波动稳定",
+    "color": "#3B82F6"
+   },
+   {
+    "func": "0.1 * x + 0.3 * sin(0.6*x)",
+    "x_min": 0,
+    "x_max": 30,
+    "title": "非平稳（趋势向上漂移）",
+    "color": "#EF4444"
+   },
+   {
+    "func": "exp(-0.3*x)",
+    "x_min": 0,
+    "x_max": 15,
+    "title": "平稳序列 ACF：快速衰减到 0",
+    "color": "#3B82F6"
+   },
+   {
+    "func": "1.0 / (1 + 0.1*x)",
+    "x_min": 0,
+    "x_max": 15,
+    "title": "非平稳序列 ACF：缓慢衰减",
+    "color": "#EF4444"
+   }
+  ]
+ }
+}

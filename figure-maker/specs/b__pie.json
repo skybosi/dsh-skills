@@ -1,0 +1,20 @@
+{
+ "id": "data-visuali-ch3-fig03",
+ "type": "pie",
+ "output": "out/data-visuali-ch3-fig03.svg",
+ "params": {
+  "title": "编程语言使用占比",
+  "values": [
+   45,
+   28,
+   18,
+   9
+  ],
+  "labels": [
+   "Python 45%",
+   "Java 28%",
+   "JavaScript 18%",
+   "其他 9%"
+  ]
+ }
+}

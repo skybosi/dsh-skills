@@ -1,0 +1,11 @@
+{
+ "id": "lft-ch4-f02",
+ "type": "normal_dist",
+ "output": "out/lft-ch4-f02.svg",
+ "params": {
+  "title": "NF4 quantile points vs standard normal distribution",
+  "mean": 0,
+  "std": 1,
+  "fill_sigma": true
+ }
+}

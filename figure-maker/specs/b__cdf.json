@@ -1,0 +1,10 @@
+{
+ "id": "ps-ch2-f03",
+ "type": "cdf",
+ "output": "out/ps-ch2-f03.svg",
+ "params": {
+  "title": "累积分布函数 F(x) = P(X ≤ x)",
+  "mean": 0,
+  "std": 1
+ }
+}

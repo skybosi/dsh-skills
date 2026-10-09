@@ -1,0 +1,8 @@
+{
+ "id": "pytorch-fund-ch1-fig04",
+ "type": "matrix_mul_panels",
+ "output": "out/pytorch-fund-ch1-fig04.svg",
+ "params": {
+  "title": "@ 矩阵乘（行×列点积） vs * 逐元素乘（形状不匹配 → 报错）"
+ }
+}

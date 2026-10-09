@@ -1,0 +1,8 @@
+{
+ "id": "time-series-ch5-fig03",
+ "type": "tensor_cube_panels",
+ "output": "out/time-series-ch5-fig03.svg",
+ "params": {
+  "title": "多变量输入：三维张量（批量×时间步×特征）与「通道混合 vs 通道独立」"
+ }
+}

@@ -1,0 +1,34 @@
+{
+ "id": "hw-ch4-f02",
+ "type": "roofline",
+ "output": "out/hw-ch4-f02.svg",
+ "params": {
+  "title": "Roofline 性能模型 (H100 FP16)",
+  "peak_flops": 989,
+  "bandwidth": 3.35,
+  "xlabel": "计算强度 (FLOP/Byte)",
+  "ylabel": "可达性能 (TFLOPS)",
+  "points": [
+   {
+    "intensity": 0.3,
+    "flops": 1.0,
+    "label": "逐元素op (ReLU)"
+   },
+   {
+    "intensity": 1.0,
+    "flops": 3.35,
+    "label": "decode (强度~1)"
+   },
+   {
+    "intensity": 50,
+    "flops": 167.5,
+    "label": "中等矩阵乘"
+   },
+   {
+    "intensity": 300,
+    "flops": 989,
+    "label": "大矩阵乘 (prefill)"
+   }
+  ]
+ }
+}

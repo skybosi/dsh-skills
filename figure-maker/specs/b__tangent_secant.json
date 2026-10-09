@@ -1,0 +1,12 @@
+{
+ "id": "calc-ch2-f01",
+ "type": "tangent_secant",
+ "output": "out/calc-ch2-f01.svg",
+ "params": {
+  "title": "割线逼近切线——导数即切线斜率",
+  "xlabel": "x",
+  "ylabel": "y",
+  "func": "x**2 + 0.3",
+  "x0": 1.5
+ }
+}

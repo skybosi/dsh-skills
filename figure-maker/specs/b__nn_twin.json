@@ -1,0 +1,32 @@
+{
+ "id": "nn-ch1-fig03",
+ "type": "nn_twin",
+ "output": "out/nn-ch1-fig03.svg",
+ "params": {
+  "title": "单层感知机 vs 多层神经网络（含隐藏层）",
+  "left": {
+   "layers": [
+    2,
+    1
+   ],
+   "layer_labels": [
+    "输入\nx1, x2",
+    "输出\n(线性边界)"
+   ],
+   "title": "单层感知机（只有输入→输出）"
+  },
+  "right": {
+   "layers": [
+    2,
+    3,
+    1
+   ],
+   "layer_labels": [
+    "输入\nx1, x2",
+    "隐藏层\n3 个神经元",
+    "输出\n(非线性边界)"
+   ],
+   "title": "多层神经网络（含隐藏层）"
+  }
+ }
+}

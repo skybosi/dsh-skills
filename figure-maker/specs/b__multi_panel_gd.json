@@ -1,0 +1,22 @@
+{
+ "id": "calc-ch5-f03",
+ "type": "multi_panel_gd",
+ "output": "out/calc-ch5-f03.svg",
+ "params": {
+  "title": "不同学习率下的梯度下降轨迹",
+  "panels": [
+   {
+    "lr": 0.03,
+    "title": "学习率过小：缓慢爬行"
+   },
+   {
+    "lr": 0.2,
+    "title": "学习率合适：平稳快速到达"
+   },
+   {
+    "lr": 0.85,
+    "title": "学习率过大：震荡甚至发散"
+   }
+  ]
+ }
+}

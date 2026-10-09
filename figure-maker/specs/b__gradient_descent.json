@@ -1,0 +1,10 @@
+{
+ "id": "calc-ch5-f02",
+ "type": "gradient_descent",
+ "output": "out/calc-ch5-f02.svg",
+ "params": {
+  "title": "梯度下降：沿负梯度方向逐步逼近最低点",
+  "xlabel": "x",
+  "ylabel": "y"
+ }
+}

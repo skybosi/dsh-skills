@@ -1,0 +1,11 @@
+{
+ "id": "la-ch6-f01",
+ "type": "contour_quiver",
+ "output": "out/la-ch6-f01.svg",
+ "params": {
+  "title": "梯度指向函数上升最快的方向，负梯度是下降方向",
+  "xlabel": "x",
+  "ylabel": "y",
+  "grid": false
+ }
+}

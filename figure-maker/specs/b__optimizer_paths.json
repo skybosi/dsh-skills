@@ -1,0 +1,30 @@
+{
+ "id": "nn-ch5-fig02",
+ "type": "optimizer_paths",
+ "output": "out/nn-ch5-fig02.svg",
+ "params": {
+  "title": "优化器下降轨迹对比：SGD → Adam 在狭长山谷中的表现",
+  "paths": [
+   {
+    "lr": 0.03,
+    "label": "SGD（震荡慢行）",
+    "color": "#d62728"
+   },
+   {
+    "lr": 0.08,
+    "label": "Momentum（加速减震）",
+    "color": "#ff7f0e"
+   },
+   {
+    "lr": 0.12,
+    "label": "RMSProp（自适应）",
+    "color": "#2ca02c"
+   },
+   {
+    "lr": 0.25,
+    "label": "Adam（平滑快速到谷底）",
+    "color": "#1f77b4"
+   }
+  ]
+ }
+}

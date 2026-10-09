@@ -1,0 +1,8 @@
+{
+ "id": "pytorch-fund-ch1-fig01",
+ "type": "tensor_blocks",
+ "output": "out/pytorch-fund-ch1-fig01.svg",
+ "params": {
+  "title": "0~3 维张量：标量 / 向量 / 矩阵 / 三维张量"
+ }
+}

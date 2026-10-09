@@ -1,0 +1,12 @@
+{
+ "id": "calc-ch1-f03",
+ "type": "limit",
+ "output": "out/calc-ch1-f03.svg",
+ "params": {
+  "title": "函数值随 x 逼近某点而趋于极限",
+  "xlabel": "x",
+  "ylabel": "f(x)",
+  "func": "x**2 + 0.5",
+  "x0": 1.0
+ }
+}

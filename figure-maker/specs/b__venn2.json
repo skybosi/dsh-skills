@@ -1,0 +1,13 @@
+{
+ "id": "rag-ch1-f05",
+ "type": "venn2",
+ "output": "out/rag-ch1-f05.svg",
+ "params": {
+  "title": "两路失手的重叠决定混合的上限",
+  "labels": [
+   "稀疏失手：词面对不上",
+   "稠密失手：表示分辨率不够"
+  ],
+  "intersection": "同时失手：文档太难"
+ }
+}

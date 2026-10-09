@@ -1,0 +1,35 @@
+{
+ "id": "unsupervised-ch1-fig03",
+ "type": "elbow",
+ "output": "out/unsupervised-ch1-fig03.svg",
+ "params": {
+  "title": "肘部法则：K 与惯性（inertia）",
+  "xlabel": "簇数 K",
+  "ylabel": "inertia",
+  "values": [
+   1200,
+   780,
+   420,
+   260,
+   190,
+   150,
+   124,
+   106,
+   92,
+   82
+  ],
+  "k": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10
+  ],
+  "elbow_k": 4
+ }
+}

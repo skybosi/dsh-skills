@@ -1,0 +1,26 @@
+{
+ "id": "rec-ch1-f04",
+ "type": "multi_curve",
+ "output": "out/rec-ch1-f04.svg",
+ "params": {
+  "title": "Precision@K 与 Recall@K 权衡曲线",
+  "xlabel": "截断长度 K",
+  "ylabel": "指标值",
+  "curves": [
+   {
+    "func": "1.0 - 0.08*x - 0.02*sin(0.5*x)",
+    "label": "Precision@K（单调下降）",
+    "color": "#3B82F6",
+    "x_min": 1,
+    "x_max": 10
+   },
+   {
+    "func": "0.1 + 0.07*x - 0.01*sin(0.7*x)",
+    "label": "Recall@K（单调上升）",
+    "color": "#F59E0B",
+    "x_min": 1,
+    "x_max": 10
+   }
+  ]
+ }
+}

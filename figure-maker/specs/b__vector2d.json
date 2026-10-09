@@ -1,0 +1,35 @@
+{
+ "id": "rec-ch2-f03",
+ "type": "vector2d",
+ "output": "out/rec-ch2-f03.svg",
+ "params": {
+  "title": "余弦相似度 vs 皮尔逊相关系数（二维空间对比）",
+  "lim": 6,
+  "vectors": [
+   {
+    "x": 3,
+    "y": 4,
+    "color": "#3B82F6",
+    "label": "向量 a（余弦）"
+   },
+   {
+    "x": 4,
+    "y": 2,
+    "color": "#F59E0B",
+    "label": "向量 b（余弦）"
+   },
+   {
+    "x": 2,
+    "y": 3,
+    "color": "#10B981",
+    "label": "向量 c（皮尔逊：去均值后）"
+   },
+   {
+    "x": 3.5,
+    "y": 1,
+    "color": "#EF4444",
+    "label": "向量 d（皮尔逊：去均值后）"
+   }
+  ]
+ }
+}
