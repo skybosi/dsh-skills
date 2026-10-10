@@ -1,0 +1,7 @@
+{
+  "id": "packet-beta",
+  "type": "flow",
+  "output": "out/packet-beta.svg",
+  "title": "协议/报文结构（字段位宽）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\npacket-beta\n  0-15: \"源端口\"\n  16-31: \"目的端口\"\n  32-63: \"序列号\""
+}

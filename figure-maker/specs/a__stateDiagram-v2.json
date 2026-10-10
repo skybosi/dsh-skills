@@ -1,0 +1,7 @@
+{
+  "id": "stateDiagram-v2",
+  "type": "flow",
+  "output": "out/stateDiagram-v2.svg",
+  "title": "状态机 / 状态迁移（支持复合状态与 note）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nstateDiagram-v2\n  [*] --> 待处理\n  待处理 --> 处理中: 开始\n  待处理 --> 已取消: 超时\n  处理中 --> 已完成: 结束\n  已完成 --> [*]\n  note right of 待处理: 超时由定时任务触发"
+}

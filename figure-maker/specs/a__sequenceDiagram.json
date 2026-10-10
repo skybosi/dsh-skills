@@ -1,0 +1,7 @@
+{
+  "id": "sequenceDiagram",
+  "type": "flow",
+  "output": "out/sequenceDiagram.svg",
+  "title": "接口调用链 / 消息时序（含 alt 分支、Note、激活块）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nsequenceDiagram\n  autonumber\n  participant C as 客户端\n  participant G as 网关\n  participant S as 服务\n  C->>G: 请求\n  G->>S: 转发\n  alt 命中缓存\n    S-->>G: 缓存结果\n  else 未命中\n    S-->>G: 回源结果\n  end\n  G-->>C: 响应\n  Note over S: 兜底逻辑"
+}

@@ -85,7 +85,8 @@ def types_md():
         for e in items:
             ex = _spec_path(e)
             exl = '[spec](%s)' % ex if ex else '—'      # TYPES.md 在 skill 根目录 → 用根相对路径
-            svg = REL_EX % e['type']
+            key = e.get('example_key') or e['type']
+            svg = REL_EX % key
             imgl = '[SVG](%s)' % svg if _exists(svg) else '—'
             L.append('| `%s` | %s | %s | %s | %s · %s |'
                      % (e['type'], e['scene'], ' · '.join(e['keywords']),
@@ -106,6 +107,7 @@ def types_md():
     L.append('|---|---|---|')
     L.append('| 泳道图（跨职能流程） | ✅ 已支持：B 类 `swimlane`（`lanes` + `steps` + `edges`，原生绘制，布局可控） | 直接 `--example swimlane` |')
     L.append('| 聚类树（dendrogram） | ✅ 已支持：`clustered_heatmap` 给 `dendrogram: true`（平均连接层次聚类 + 行/列树） | 需要更专业的树请用 scipy/seaborn |')
+    L.append('| 桑基图 `sankey-beta` | ⚠️ 内置 Mermaid 的 sankey **只接受 ASCII 节点名**：源/目标含中文（即使加引号）都会解析失败 | 节点名用英文（数值与结构不受影响）；或用 B 类 `waterfall` / `stacked_bar` 表达构成与流向 |')
     L.append('| ZenUML | ❌ 内置的单文件 mermaid bundle 不含该图型 | 渲染器会**直接给出** `sequenceDiagram` 骨架（alt/loop/par/Note 都支持） |')
     L.append('| C4 上下文 / 容器图 | ⚠️ 能出图，但 Mermaid 的 C4 自动布局容易把描述文字和关系标签叠在一起（会告警 + 给建议） | 用 `flowchart` 复刻 C4 风格（见上方 arch 分类的骨架），或缩短 description |')
     L.append('| gitGraph | ⚠️ commit 标签多时容易互相压 | 减少分支/提交，或拆图 |')
@@ -132,7 +134,7 @@ def gallery_md():
     L.append('- 机器版式自检：文字重叠 0、越界 0；A 类还按图型分级检查节点间距（`--check` 可当红线）')
     L.append('- **选型不靠记清单**：`--recommend "一句话描述"` 直接给候选图型 + 可跑骨架；`--list` 按 14 个场景分类列全部图型')
     L.append('')
-    n_img = sum(1 for e in ents if _exists(REL_EX % (e['type'] if e['kind'] == 'B' else e['mermaid'])))
+    n_img = sum(1 for e in ents if _exists(REL_EX % (e.get('example_key') or e['type'])))
     L.append('## 全部条目（%d 个；其中 %d 张带样例图）' % (len(ents), n_img))
     L.append('')
     L.append('> 样例由同名 spec 原样生成：`python3 scripts/build_examples.py --only <图型>`')
@@ -146,7 +148,8 @@ def gallery_md():
             label = e['mermaid'] if e['kind'] == 'A' else e['type']
             L.append('| %d | %s | %s | [`%s`](#%s) | %s |' % (i, e['kind'], name, label, label.lower(), e['scene'][:46]))
     L.append('')
-    a_ex = [t for t in ('flow', 'graph', 'tree', 'nn_diagram', 'ladder', 'timeline') if _exists(REL_EX % t)]
+    a_ex = [e['example_key'] for e in a_ents
+            if e.get('example_key') and _exists(REL_EX % e['example_key'])]
     if a_ex:
         L.append('### A 类样例图（%d 张，来自 specs/a__*.json）' % len(a_ex))
         L.append('')
@@ -169,14 +172,15 @@ def gallery_md():
             L.append('<a id="%s"></a>' % label.lower())
             L.append('**`%s`** —— %s' % (label, e['scene']))
             L.append('')
-            svg = REL_EX % e['type']
+            svg = REL_EX % (e.get('example_key') or e['type'])
             if e['kind'] == 'B' and _exists(svg):
                 L.append('![%s](%s)' % (label, svg))
                 L.append('')
             if e['kind'] == 'B':
                 L.append('<sub>spec：<code>%s</code> ｜ 参数键：%s</sub>' % (_spec_path(e) or '—', ' · '.join(e['params']) or '—'))
             else:
-                extra = ('样例图：[`%s`](#a-%s) ｜ ' % (REL_EX % e['type'], e['type'])) if _exists(REL_EX % e['type']) else ''
+                _k = e.get('example_key') or e['type']
+                extra = ('样例图：[`%s`](#a-%s) ｜ ' % (REL_EX % _k, _k)) if _exists(REL_EX % _k) else ''
                 L.append('<sub>A 类：`mmd` 里写 `%s`，spec 的 `type` 填 `%s`（骨架见 [TYPES.md](TYPES.md)） ｜ %s</sub>'
                          % (e['mermaid'], e['type'], extra.rstrip(' ｜ ')))
             L.append('')

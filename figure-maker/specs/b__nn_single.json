@@ -1,0 +1,12 @@
+{
+  "id": "nn-single-demo",
+  "type": "nn_single",
+  "output": "out/nn-single-demo.svg",
+  "width_in": 8.0,
+  "height_in": 8.0,
+  "params": {
+    "title": "全连接神经网络（神经元级）",
+    "layers": [4, 6, 8, 6, 3],
+    "layer_labels": ["输入层", "隐藏层 1", "隐藏层 2", "隐藏层 3", "输出层"]
+  }
+}

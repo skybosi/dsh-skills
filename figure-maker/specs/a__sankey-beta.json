@@ -1,0 +1,7 @@
+{
+  "id": "sankey-beta",
+  "type": "flow",
+  "output": "out/sankey-beta.svg",
+  "title": "流量/去向归因（桑基图）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nsankey-beta\n\nRequest,CacheHit,620\nRequest,Origin,380\nOrigin,SlowQuery,90\nOrigin,FastQuery,290"
+}

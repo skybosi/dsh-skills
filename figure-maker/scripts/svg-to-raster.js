@@ -22,9 +22,8 @@ function parseArgs(argv) {
   if (!a.in || !a.out) { console.error('用法：node svg-to-raster.js --in fig.svg --out fig.png [--scale 2]'); process.exit(2); }
   const svg = fs.readFileSync(a.in, 'utf8');
   const scale = Number(a.scale || 2);           // 默认 2× 提高清晰度（矢量缩放无损）
-  // ⚠️ 浏览器目录探测必须在 require('playwright') **之前**：Playwright 在模块加载时就定好了
-  //    浏览器注册表路径，之后再设 PLAYWRIGHT_BROWSERS_PATH 是**不生效**的
-  //    （之前放在 require 之后 → A 类 SVG 能出、PNG/WebP 报 "Executable doesn't exist"，实测踩过）。
+// 浏览器目录自动探测：**必须与 render-mermaid.js 保持一致**，否则会出现
+  // 「A 类 SVG 能出、PNG/WebP 报 Executable doesn't exist」这种半残状态（实测踩过）。
   if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
     const cands = ['/tmp/pw-browsers', path.join(require('os').homedir(), 'Library/Caches/ms-playwright')];
     for (const c of cands) { if (fs.existsSync(c)) { process.env.PLAYWRIGHT_BROWSERS_PATH = c; break; } }
@@ -35,6 +34,12 @@ function parseArgs(argv) {
   catch (e) {
     const PW = process.env.PW_MODULES || '/tmp/pw/node_modules';
     playwright = require(path.join(PW, 'playwright'));   // 与 render-mermaid.js 同款解析
+  }
+  // 浏览器目录自动探测：**必须与 render-mermaid.js 保持一致**，否则会出现
+  // 「A 类 SVG 能出、PNG/WebP 报 Executable doesn't exist」这种半残状态（实测踩过）。
+  if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
+    const cands = ['/tmp/pw-browsers', path.join(require('os').homedir(), 'Library/Caches/ms-playwright')];
+    for (const c of cands) { if (fs.existsSync(c)) { process.env.PLAYWRIGHT_BROWSERS_PATH = c; break; } }
   }
   let browser;
   try { browser = await playwright.chromium.launch({ channel: 'chromium' }); }

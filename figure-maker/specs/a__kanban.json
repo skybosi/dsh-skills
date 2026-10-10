@@ -1,0 +1,7 @@
+{
+  "id": "kanban",
+  "type": "flow",
+  "output": "out/kanban.svg",
+  "title": "看板（待办/进行中/已完成）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nkanban\n  待办\n    [任务 A]\n  进行中\n    [任务 B]\n  已完成\n    [任务 C]"
+}

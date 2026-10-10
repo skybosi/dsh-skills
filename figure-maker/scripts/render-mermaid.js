@@ -39,54 +39,92 @@ const FONT_STACK = 'system-ui, -apple-system, "Noto Sans SC", "PingFang SC", "Mi
 // ---------------------------------------------------------------------------
 // 软色板主题：flowchart 靠 classDef 上色，但**时序图 / ER / 类图 / C4 / 甘特 / 饼图
 // 等图型没有 classDef**，以前只能吃 Mermaid 默认主题色（米黄/亮蓝），与本 skill 的
-// 软色板不一致。这里把同一套 SOFT_COLORS 注入 themeVariables，让 A 类风格统一。
+// 软色板不一致。这里把同一套软色板注入 themeVariables，让 A 类风格统一。
 // 注：图内自带的 %%{init}%% 指令会覆盖同名变量，所以已有自定义配色的 spec 不受影响。
+//
+// 色板**唯一来源是 style.py**：draw.py 会把 style.palette_payload() 写成 JSON 并用
+// --palette 传进来，覆盖下面 SLOT 的默认值。SLOT 的默认值只在脱离 draw.py 单独调用本
+// 渲染器时兜底 —— 两处各存一份色值必然漂移（改了一边另一边没改，A/B 配色就分裂）。
 // ---------------------------------------------------------------------------
-const SOFT_THEME = {
-  primaryColor: '#DBEAFE', primaryBorderColor: '#93C5FD', primaryTextColor: '#212529',
-  secondaryColor: '#F1F3F5', tertiaryColor: '#F8FBFF',
-  lineColor: '#6B7280', textColor: '#212529', mainBkg: '#DBEAFE', nodeBorder: '#93C5FD',
-  defaultLinkColor: '#6B7280', clusterBkg: '#F8FBFF', clusterBorder: '#E2E8F0',
-  titleColor: '#212529', edgeLabelBackground: 'transparent', labelBackground: 'transparent',
-  background: '#FFFFFF',
-  // —— 时序图 ——
-  actorBkg: '#DBEAFE', actorBorder: '#93C5FD', actorTextColor: '#212529', actorLineColor: '#9CA3AF',
-  signalColor: '#4B5563', signalTextColor: '#212529',
-  labelBoxBkgColor: '#FEF3C7', labelBoxBorderColor: '#FCD34D', labelTextColor: '#212529',
-  loopTextColor: '#212529', noteBkgColor: '#FEF3C7', noteBorderColor: '#FCD34D', noteTextColor: '#212529',
-  activationBkgColor: '#C4B5FD', activationBorderColor: '#93C5FD', sequenceNumberColor: '#FFFFFF',
-  // —— 类图 / 状态图 ——
-  classText: '#212529',
-  fillType0: '#DBEAFE', fillType1: '#F1F3F5', fillType2: '#FEF3C7', fillType3: '#D1FAE5',
-  fillType4: '#FBE4D5', fillType5: '#E9D5FF', fillType6: '#FECACA', fillType7: '#F8FBFF',
-  // —— ER 图 ——
-  attributeBackgroundColorOdd: '#F8FBFF', attributeBackgroundColorEven: '#FFFFFF',
-  // —— 甘特图 ——
-  sectionBkgColor: '#F8FBFF', altSectionBkgColor: '#FFFFFF', sectionBkgColor2: '#F1F3F5',
-  taskBkgColor: '#93C5FD', taskBorderColor: '#93C5FD', taskTextColor: '#212529',
-  taskTextOutsideColor: '#212529', taskTextDarkColor: '#212529',
-  activeTaskBkgColor: '#E9B08A', activeTaskBorderColor: '#E9B08A',
-  doneTaskBkgColor: '#E2E8F0', doneTaskBorderColor: '#ADB5BD',
-  critBkgColor: '#F87171', critBorderColor: '#F87171', todayLineColor: '#F87171', gridColor: '#F1F3F5',
-  // —— 饼图 ——
-  pie1: '#93C5FD', pie2: '#86EFAC', pie3: '#E9B08A', pie4: '#C4B5FD', pie5: '#F87171',
-  pie6: '#9CA3AF', pie7: '#4B5563', pie8: '#DBEAFE', pie9: '#D1FAE5', pie10: '#FEF3C7',
-  pie11: '#FECACA', pie12: '#E9D5FF',
-  pieTitleTextColor: '#212529', pieSectionTextColor: '#212529', pieLegendTextColor: '#212529',
-  pieStrokeColor: '#FFFFFF', pieOuterStrokeColor: '#FFFFFF', pieOpacity: '0.9',
-  // —— 四象限图 ——
-  quadrant1Fill: '#DBEAFE', quadrant2Fill: '#F1F3F5', quadrant3Fill: '#F8FBFF', quadrant4Fill: '#FEF3C7',
-  quadrant1TextFill: '#212529', quadrant2TextFill: '#212529', quadrant3TextFill: '#212529', quadrant4TextFill: '#212529',
-  quadrantPointFill: '#93C5FD', quadrantPointTextFill: '#212529',
-  quadrantXAxisTextFill: '#4B5563', quadrantYAxisTextFill: '#4B5563', quadrantTitleFill: '#212529',
-  quadrantInternalBorderStrokeFill: '#E2E8F0', quadrantExternalBorderStrokeFill: '#D1D5DB',
-  // —— git 图 ——
-  git0: '#93C5FD', git1: '#86EFAC', git2: '#E9B08A', git3: '#C4B5FD',
-  git4: '#F87171', git5: '#9CA3AF', git6: '#4B5563', git7: '#DBEAFE',
-  commitLabelColor: '#212529', commitLabelBackground: '#F8FBFF',
-  // —— xychart / 其它 ——
-  xyChart: { backgroundColor: '#FFFFFF', titleColor: '#212529', xAxisLabelColor: '#4B5563', xAxisTitleColor: '#4B5563', xAxisTickColor: '#6B7280', xAxisLineColor: '#D1D5DB', yAxisLabelColor: '#4B5563', yAxisTitleColor: '#4B5563', yAxisTickColor: '#6B7280', yAxisLineColor: '#D1D5DB', plotBorderColor: '#E2E8F0' },
+const SLOT = {
+  // SOFT_COLORS
+  blue: '#C2E8F7', red: '#F87171', green: '#CCE7CF', purple: '#FCE0E1',
+  orange: '#FFE2BB', grey: '#9CA3AF', dark: '#4B5563',
+  // FILL
+  neutral: '#F8FBFF', root: '#FCE0E1', category: '#C2E8F7', leaf: '#F3F3F4',
+  input: '#FFE2BB', output: '#CCE7CF', warning: '#F2F4C1', error: '#FECACA',
+  // STROKE
+  stroke_neutral: '#212529', stroke_root: '#212529', stroke_category: '#212529',
+  stroke_leaf: '#212529', stroke_input: '#212529', stroke_output: '#212529',
+  stroke_warning: '#212529', stroke_error: '#F87171',
+  // INK
+  ink_title: '#212529', ink_text: '#212529', ink_axis: '#4B5563', ink_tick: '#6B7280',
 };
+
+/** 由 SLOT 生成主题（不内联色值，全部走 SLOT，便于被 --palette 覆盖） */
+function buildSoftTheme() {
+  return {
+    primaryColor: SLOT.category, primaryBorderColor: SLOT.blue, primaryTextColor: SLOT.ink_text,
+    secondaryColor: SLOT.leaf, tertiaryColor: SLOT.neutral,
+    lineColor: SLOT.ink_tick, textColor: SLOT.ink_text, mainBkg: SLOT.category, nodeBorder: SLOT.blue,
+    defaultLinkColor: SLOT.ink_tick, clusterBkg: SLOT.neutral, clusterBorder: '#E2E8F0',
+    titleColor: SLOT.ink_text, edgeLabelBackground: 'transparent', labelBackground: 'transparent',
+    background: '#FFFFFF',
+    // —— 时序图 ——
+    actorBkg: SLOT.category, actorBorder: SLOT.blue, actorTextColor: SLOT.ink_text, actorLineColor: SLOT.grey,
+    signalColor: SLOT.dark, signalTextColor: SLOT.ink_text,
+    labelBoxBkgColor: SLOT.warning, labelBoxBorderColor: SLOT.stroke_warning, labelTextColor: SLOT.ink_text,
+    loopTextColor: SLOT.ink_text, noteBkgColor: SLOT.warning, noteBorderColor: SLOT.stroke_warning, noteTextColor: SLOT.ink_text,
+    activationBkgColor: SLOT.purple, activationBorderColor: SLOT.blue, sequenceNumberColor: '#FFFFFF',
+    // —— 类图 / 状态图 ——
+    classText: SLOT.ink_text,
+    fillType0: SLOT.category, fillType1: SLOT.leaf, fillType2: SLOT.warning, fillType3: SLOT.output,
+    fillType4: SLOT.input, fillType5: SLOT.root, fillType6: SLOT.error, fillType7: SLOT.neutral,
+    // —— ER 图 ——
+    attributeBackgroundColorOdd: SLOT.neutral, attributeBackgroundColorEven: '#FFFFFF',
+    // —— 甘特图 ——
+    sectionBkgColor: SLOT.neutral, altSectionBkgColor: '#FFFFFF', sectionBkgColor2: SLOT.leaf,
+    taskBkgColor: SLOT.blue, taskBorderColor: SLOT.blue, taskTextColor: SLOT.ink_text,
+    taskTextOutsideColor: SLOT.ink_text, taskTextDarkColor: SLOT.ink_text,
+    activeTaskBkgColor: SLOT.orange, activeTaskBorderColor: SLOT.orange,
+    doneTaskBkgColor: '#E2E8F0', doneTaskBorderColor: SLOT.stroke_leaf,
+    critBkgColor: SLOT.red, critBorderColor: SLOT.red, todayLineColor: SLOT.red, gridColor: SLOT.leaf,
+    // —— 饼图 ——
+    pie1: SLOT.blue, pie2: SLOT.green, pie3: SLOT.orange, pie4: SLOT.purple, pie5: SLOT.red,
+    pie6: SLOT.grey, pie7: SLOT.dark, pie8: SLOT.category, pie9: SLOT.output, pie10: SLOT.warning,
+    pie11: SLOT.error, pie12: SLOT.root,
+    pieTitleTextColor: SLOT.ink_text, pieSectionTextColor: SLOT.ink_text, pieLegendTextColor: SLOT.ink_text,
+    pieStrokeColor: '#FFFFFF', pieOuterStrokeColor: '#FFFFFF', pieOpacity: '0.9',
+    // —— 四象限图 ——
+    quadrant1Fill: SLOT.category, quadrant2Fill: SLOT.leaf, quadrant3Fill: SLOT.neutral, quadrant4Fill: SLOT.warning,
+    quadrant1TextFill: SLOT.ink_text, quadrant2TextFill: SLOT.ink_text, quadrant3TextFill: SLOT.ink_text, quadrant4TextFill: SLOT.ink_text,
+    quadrantPointFill: SLOT.blue, quadrantPointTextFill: SLOT.ink_text,
+    quadrantXAxisTextFill: SLOT.dark, quadrantYAxisTextFill: SLOT.dark, quadrantTitleFill: SLOT.ink_text,
+    quadrantInternalBorderStrokeFill: '#E2E8F0', quadrantExternalBorderStrokeFill: '#D1D5DB',
+    // —— git 图 ——
+    git0: SLOT.blue, git1: SLOT.green, git2: SLOT.orange, git3: SLOT.purple,
+    git4: SLOT.red, git5: SLOT.grey, git6: SLOT.dark, git7: SLOT.category,
+    commitLabelColor: SLOT.ink_text, commitLabelBackground: SLOT.neutral,
+    // —— xychart / 其它 ——
+    xyChart: { backgroundColor: '#FFFFFF', titleColor: SLOT.ink_text, xAxisLabelColor: SLOT.dark, xAxisTitleColor: SLOT.dark, xAxisTickColor: SLOT.ink_tick, xAxisLineColor: '#D1D5DB', yAxisLabelColor: SLOT.dark, yAxisTitleColor: SLOT.dark, yAxisTickColor: SLOT.ink_tick, yAxisLineColor: '#D1D5DB', plotBorderColor: '#E2E8F0' },
+  };
+}
+
+const SOFT_THEME = buildSoftTheme();
+
+/** 用 draw.py 传来的色板覆盖 SLOT，并就地刷新 SOFT_THEME（色板唯一来源在 style.py） */
+function applyPalette(palPath) {
+  if (!palPath) return;
+  let payload;
+  try {
+    payload = JSON.parse(fs.readFileSync(palPath, 'utf8'));
+  } catch (e) {
+    console.error('⚠️  读不到色板文件，回退内置默认值：' + palPath);
+    return;
+  }
+  Object.assign(SLOT, payload);
+  Object.assign(SOFT_THEME, buildSoftTheme());
+}
 
 // 节点最小净距阈值：**按图型分级**。20px 是 flowchart 的口径，套到 block/kanban/mindmap
 // 这类本来排版就紧的图型上纯属误报（实测 block-beta 净距 8px、kanban 5px 都被误拦）。
@@ -97,6 +135,9 @@ const GAP_MIN = {
 // 节点内标签「溢出节点框」检查只对「节点=矩形/多边形 + 文字」的图型有意义；
 // mindmap 的节点形状与文字排布口径不同（实测 1px 级误差被判溢出），故跳过。
 const SKIP_OVERFLOW = new Set(['mindmap']);
+// 文字重叠红线的按图型豁免：treemap-beta 的名称与数值是两条堆叠的 <text>，
+// bbox 天然相接（实测 ratio≈0.13），属结构性误报；明细仍写在 checks.overlapText 里。
+const SKIP_OVERLAP = new Set(['treemap-beta']);
 
 /** 从 mmd 源码里认图型（跳过 %%{init}%% 指令、注释与空行） */
 function diagramType(mmd) {
@@ -150,8 +191,7 @@ const LAYOUT_TIPS = {
 /** 扫 mmd 里几类「一定会在图上变成乱码/噪音」的写法，提前给提示（不是错误，不阻断渲染） */
 function scanHints(mmd) {
   const hints = [];
-  // 先把 %%{init}%% 与 %% 行注释、以及 classDef/class/style/linkStyle 这些**配置行**去掉：
-  // 它们不会作为文字渲染，里面的 #RRGGBB 是正常配色 —— 否则 `color:#212529;` 会被误判成实体码 #35;
+  // 先把 %%{init}%% 与 %% 行注释去掉：注释里的东西不会渲染，不该产生提示
   const src = String(mmd).replace(/%%\{[\s\S]*?\}%%/g, '').replace(/^\s*%%.*$/gm, '')
     .split('\n').filter((l) => !/^\s*(classDef|class|style|linkStyle|click)\b/.test(l)).join('\n');
   if (/&#\d+;|&#x[0-9A-Fa-f]+;/.test(src))
@@ -163,6 +203,29 @@ function scanHints(mmd) {
     const m = line.match(/(?:\(|\[|\{)[^)\]}]*?(#[0-9A-Fa-f]{3,8})\b/);
     if (m) {
       hints.push('标签文字里混进了十六进制色号（' + m[1] + '）：配色请用 classDef / style，不要把色号写进文字');
+      break;
+    }
+  }
+  // 手写 <br/> 把标签切成多行：长短悬殊时节点会被撑成又高又窄，文字在框里左右悬空。
+  // 成因是 htmlLabels:false —— Mermaid 只在**空格**处换行，所以英文标签本可交给自动换行，
+  // 中文没有空格、必须手写 <br/>，但得断在词/短语边界并让各行长度接近。
+  // 长度按「视觉宽度」估：CJK 等全角字符记 2，拉丁字符记 1。
+  const visWidth = (s) => s.split('').reduce((n, c) => n + (c.charCodeAt(0) > 0x2E80 ? 2 : 1), 0);
+  for (const line of src.split('\n')) {
+    if (!/<br\s*\/?>/i.test(line)) continue;
+    if (/^\s*(classDef|class|style|linkStyle|click)\b/.test(line)) continue;
+    const m = line.match(/[(\[]\s*["']([\s\S]*?)["']\s*[)\]]/);
+    if (!m) continue;
+    const segs = m[1].split(/<br\s*\/?>/i).map((s) => s.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+    if (segs.length < 4) continue;
+    // 首行不参与「长短悬殊」判定：短首行当小标题是常见且合理的写法（如「混合 / 两路信号…」）
+    const w = segs.slice(1).map(visWidth);
+    const mx = Math.max.apply(null, w), mn = Math.min.apply(null, w);
+    if (mx > 0 && mn < mx * 0.45) {
+      hints.push('标签被 <br/> 切成 ' + segs.length + ' 行且长短悬殊（最短 ' + mn +
+        ' / 最长 ' + mx + ' 视觉宽度）：节点会被撑成又高又窄、文字在框里左右悬空。' +
+        '英文标签直接删掉 <br/> 交给 Mermaid 按空格自动换行即可；' +
+        '中文没有空格必须手写，但要断在词/短语边界、并让各行长度接近');
       break;
     }
   }
@@ -198,7 +261,7 @@ async function renderMermaid(mmd, opts = {}) {
       { waitUntil: 'load' }
     );
     await page.addScriptTag({ path: MERMAID_JS });
-    const result = await page.evaluate(async ({ code, title, curve, type, gapMin, skipOverflow, softTheme, fontStack, bg, autofit }) => {
+    const result = await page.evaluate(async ({ code, title, curve, type, gapMin, skipOverflow, skipOverlap, softTheme, fontStack, bg, autofit }) => {
       /* global mermaid */
       const SVGNS = 'http://www.w3.org/2000/svg';
       // 规范里的 %%{init}%% 指令照旧保留在源码里；这里再把同一套参数设为**默认值**，
@@ -218,6 +281,10 @@ async function renderMermaid(mmd, opts = {}) {
                      //    但微信小程序 image 组件不支持 → 端上标签会整块丢失
                      htmlLabels: false },
       });
+      // ⚠️ 必须在 mermaid.render **之前**等字体就绪：Mermaid 布局要测量文本宽度，
+      //    字体没加载完就测，量到的宽度会偏；同一份 mmd 两次渲染的曲线控制点就会不同
+      //    （几何看着一样，但 SVG 不是逐字节可复现，git diff 全是噪音）。
+      await document.fonts.ready;
       const id = 'fig' + Math.abs(code.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7));
       const { svg } = await mermaid.render(id, code);
       const canvas = document.getElementById('canvas');
@@ -251,50 +318,41 @@ async function renderMermaid(mmd, opts = {}) {
         '.marker path,.marker polygon{fill:#6B7280!important;stroke:#6B7280!important;}';
       svgEl.setAttribute('xmlns', SVGNS);
 
-      // ---- 画布归一化 + 标题：**以内容真实 bbox 为中心重建画布**
-      //  ⚠️ 千万别拿 Mermaid 的 viewBox 当画布基准：它的留白左右并不对称
-      //     （实测 ladder 左 20px / 右 231px，flow 更夸张）—— 照它居中的结果就是内容明显偏右。
-      //  正确做法：把内容包进 <g>，用 getBBox() 量出**内容真实外框**，再按
-      //     「宽度 = max(内容宽, 标题宽) + 2×margin、高度 = 内容高 + 标题行 + 2×margin」
-      //  重建画布并把原点归一到 (0,0)：内容永远水平居中，负原点图型（时序图 / architecture-beta /
-      //  kanban）也因此天然正确。
-      await document.fonts.ready;
-      const MARGIN = 10, TITLE_H = title ? 34 : 0;
-      const g = document.createElementNS(SVGNS, 'g');
-      g.setAttribute('id', 'fig-content');
-      while (svgEl.firstChild) g.appendChild(svgEl.firstChild);
-      svgEl.appendChild(g);
-      let cb = null;
-      try { cb = g.getBBox(); } catch (e) { cb = null; }
-      if (!cb || !(cb.width > 0) || !(cb.height > 0)) {          // 兜底：量不到就用 viewBox
-        const vb0 = svgEl.viewBox.baseVal;
-        cb = { x: vb0.x, y: vb0.y, width: vb0.width, height: vb0.height };
-      }
-      let titleEl = null, tw = 0;
+      // ---- 标题（站点/端上直接显示 SVG，标题必须画进图里；规范里「标题不进 Mermaid」照旧遵守）
+      //      ⚠️ 关键修复：以前注入标题时把 viewBox 强制改成 `0 0 W H+titleH`，**丢掉了原始原点**。
+      //      而 Mermaid 给不少图型（时序图 -50,-10；architecture-beta -276,-65；kanban 90,-310）
+      //      用的是负原点坐标系 —— 结果带标题的架构图被裁掉左边节点、看板直接变成空白。
+      //      现在改为「按标题高度向上扩画布」，原点只按居中偏移量平移，永不裁内容。
+      const vb = svgEl.viewBox.baseVal;
+      const vbX = vb.x, vbY = vb.y, W = vb.width, H = vb.height;
+      let canvasX = vbX, canvasY = vbY, canvasW = W, canvasH = H;
       if (title) {
-        titleEl = document.createElementNS(SVGNS, 'text');
-        titleEl.setAttribute('text-anchor', 'middle');
-        titleEl.setAttribute('font-family', fontStack);
-        titleEl.setAttribute('font-size', '16');
-        titleEl.setAttribute('font-weight', 'bold');
-        titleEl.setAttribute('fill', '#212529');
-        titleEl.setAttribute('id', 'fig-title');   // ⚠️ 必须给 id：htmlLabels=false 时节点标签也是 <text>
-        titleEl.textContent = title;
-        svgEl.appendChild(titleEl);
-        try { tw = titleEl.getComputedTextLength() || 0; } catch (e) { tw = 0; }
-        if (!tw) { try { tw = titleEl.getBBox().width || 0; } catch (e) { tw = 0; } }
+        const titleH = 34;
+        await document.fonts.ready;
+        const t = document.createElementNS(SVGNS, 'text');
+        t.setAttribute('x', '0'); t.setAttribute('y', '0');
+        t.setAttribute('text-anchor', 'middle');
+        t.setAttribute('font-family', fontStack);
+        t.setAttribute('font-size', '16');
+        t.setAttribute('font-weight', 'bold');
+        t.setAttribute('fill', '#212529');
+        t.setAttribute('id', 'fig-title');   // ⚠️ 必须给 id：htmlLabels=false 时节点标签也是 <text>
+        t.textContent = title;
+        svgEl.appendChild(t);
+        const tw = (t.getComputedTextLength ? t.getComputedTextLength() : t.getBBox().width) || 0;
+        const margin = 24;
+        canvasW = Math.max(W, Math.ceil(tw + margin * 2));
+        const dx = Math.round((canvasW - W) / 2);
+        // ⚠️ 居中只做一次：viewBox 原点左移 dx，内容自然落在画布中央（与纵向的处理方式一致）。
+        // 以前这里**同时**给内容组加了 translate(dx)，两处叠加成 2dx —— 标题比图宽时
+        // （很常见）内容会被整块推到画布最右边，左边留一大片空白。实测偏移量 = canvasW - W。
+        canvasX = vbX - dx;
+        canvasY = vbY - titleH;                   // 向上扩出标题行
+        canvasH = H + titleH;
+        t.setAttribute('x', String(canvasX + canvasW / 2));
+        t.setAttribute('y', String(canvasY + 22));
       }
-      let canvasW = Math.ceil(Math.max(cb.width, tw) + MARGIN * 2);
-      let canvasH = Math.ceil(cb.height + TITLE_H + MARGIN * 2);
-      const contentDx = (canvasW - cb.width) / 2 - cb.x;         // 内容水平居中
-      const contentDy = TITLE_H + MARGIN - cb.y;
-      g.setAttribute('transform', `translate(${contentDx.toFixed(2)},${contentDy.toFixed(2)})`);
-      if (titleEl) {
-        titleEl.setAttribute('x', String(Math.round(canvasW / 2)));
-        titleEl.setAttribute('y', String(Math.round(TITLE_H / 2 + 6)));
-      }
-      const canvasX = 0, canvasY = 0;
-      svgEl.setAttribute('viewBox', `0 0 ${canvasW} ${canvasH}`);
+      svgEl.setAttribute('viewBox', `${canvasX} ${canvasY} ${canvasW} ${canvasH}`);
       svgEl.setAttribute('width', canvasW);
       svgEl.setAttribute('height', canvasH);
       // 规范要求「背景纯白」：显式插一块白底（id 不是 class，不会被上面那套清理规则命中），
@@ -417,7 +475,12 @@ async function renderMermaid(mmd, opts = {}) {
         checks: {
           diagramType: type,
           gapMin,
-          overlapText,
+          // 免重叠红线的图型把清单置空，但原始明细另存 overlapTextExempt —— **不隐藏数据**，
+          // 只是不再当红线（draw.py 与 checksPass 都按 overlapText 长度判定）。
+          // ⚠️ skipOverlap 必须由外部传参：page.evaluate 的回调跑在浏览器上下文，
+          //    取不到 Node 作用域里的 SKIP_OVERLAP（踩过：直接引用导致 A 类全部渲染失败）。
+          overlapText: skipOverlap ? [] : overlapText,
+          overlapTextExempt: skipOverlap && overlapText.length ? overlapText : undefined,
           overflow,
           outOfCanvas,          // 扩画布**之前**的越界清单（保留原始信号）
           canvasFitted,         // 非 null 表示已自动扩过画布，值为四边扩了多少（user unit）
@@ -425,6 +488,7 @@ async function renderMermaid(mmd, opts = {}) {
         },
       };
     }, { code: mmd, title, curve: opts.curve || '', type, gapMin, skipOverflow: SKIP_OVERFLOW.has(type),
+         skipOverlap: SKIP_OVERLAP.has(type),
          softTheme: SOFT_THEME, fontStack: FONT_STACK, bg: opts.bg !== false, autofit: opts.autofit !== false });
     // 提示在 Node 侧算（要扫源码），挂到 checks 上一起回传
     result.checks.warnings = warnings;
@@ -445,9 +509,11 @@ function checksPass(c) {
 async function main() {
   const a = parseArgs(process.argv);
   if (!a.in) {
-    console.error('用法：node render-mermaid.js --in fig.mmd --out fig.svg [--title 标题] [--curve basis] [--json 结果.json]');
+    console.error('用法：node render-mermaid.js --in fig.mmd --out fig.svg [--title 标题] [--curve basis] [--json 结果.json] [--palette 色板.json]');
     process.exit(2);
   }
+  // 色板覆盖必须在渲染前完成：draw.py 传的是 style.palette_payload()
+  applyPalette(typeof a.palette === 'string' ? a.palette : '');
   let mmd;
   try {
     mmd = fs.readFileSync(a.in, 'utf8');

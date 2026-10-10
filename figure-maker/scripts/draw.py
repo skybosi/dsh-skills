@@ -277,7 +277,13 @@ def render_a(spec, out):
     json_path = os.path.join(tmpdir, 'checks.json')
     open(mmd_path, 'w', encoding='utf-8').write(mmd)
     os.makedirs(os.path.dirname(os.path.abspath(out)) or '.', exist_ok=True)
-    cmd = ['node', js, '--in', mmd_path, '--out', svg_path, '--json', json_path]
+    # 色板唯一来源在 style.py；写成 JSON 交给渲染器，JS 侧不再自存一份（否则两处必然漂移）
+    from style import palette_payload
+    pal_path = os.path.join(tmpdir, 'palette.json')
+    with open(pal_path, 'w', encoding='utf-8') as fh:
+        json.dump(palette_payload(), fh, ensure_ascii=False)
+    cmd = ['node', js, '--in', mmd_path, '--out', svg_path, '--json', json_path,
+           '--palette', pal_path]
     if spec.get('title'):
         cmd += ['--title', spec['title']]
     if spec.get('curve'):

@@ -1,0 +1,7 @@
+{
+  "id": "radar-beta",
+  "type": "flow",
+  "output": "out/radar-beta.svg",
+  "title": "雷达图（Mermaid 版，多指标对比）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nradar-beta\n  title 健康度\n  axis a[\"错误率\"], b[\"延迟\"], c[\"吞吐\"]\n  curve s1[\"改造前\"]{80, 70, 60}\n  curve s2[\"改造后\"]{40, 35, 90}"
+}

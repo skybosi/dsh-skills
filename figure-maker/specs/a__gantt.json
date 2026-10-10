@@ -1,0 +1,7 @@
+{
+  "id": "gantt",
+  "type": "flow",
+  "output": "out/gantt.svg",
+  "title": "排期 / 甘特图（依赖、里程碑、进度状态）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\ngantt\n  title 迭代排期\n  dateFormat YYYY-MM-DD\n  section 设计\n    需求评审 :done, a1, 2026-01-05, 2d\n  section 开发\n    接口实现 :active, a2, after a1, 5d\n  section 发布\n    灰度 :milestone, after a2, 0d"
+}

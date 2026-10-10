@@ -1,0 +1,7 @@
+{
+  "id": "classDiagram",
+  "type": "flow",
+  "output": "out/classDiagram.svg",
+  "title": "类图 / 领域模型（属性、方法、多重度、依赖）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nclassDiagram\n  class Order {\n    +String id\n    +pay() bool\n  }\n  class OrderItem {\n    +String sku\n    +int qty\n  }\n  Order \"1\" *-- \"n\" OrderItem"
+}

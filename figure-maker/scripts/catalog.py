@@ -65,10 +65,10 @@ A_FAMILIES = [
      "architecture-beta\n  group api(cloud)[接入层]\n  service gw(server)[网关] in api\n  service svc(server)[服务] in api\n  service db(database)[数据库]\n  gw:R -- L:svc\n  svc:R -- L:db"),
     ("flow", "C4Context", "arch", "C4 上下文/容器图（人-系统-外部系统关系）",
      ["C4", "上下文图", "系统上下文", "外部系统"],
-     "C4Context\n  title 系统上下文\n  Person(user, \"用户\", \"说明\")\n  System(sys, \"本系统\", \"说明\")\n  System_Ext(ext, \"外部系统\", \"说明\")\n  Rel(user, sys, \"使用\")\n  Rel(sys, ext, \"调用\""),
+     "C4Context\n  title 系统上下文\n  Person(user, \"用户\", \"说明\")\n  System(sys, \"本系统\", \"说明\")\n  System_Ext(ext, \"外部系统\", \"说明\")\n  Rel(user, sys, \"使用\")\n  Rel(sys, ext, \"调用\")"),
     ("flow", "flowchart", "arch", "C4 风格架构图（人/本系统/外部系统 + 关系，用 flowchart 复刻，比 C4Context 可控）",
      ["C4 架构图", "C4 上下文图", "C4", "上下文图", "系统上下文", "外部系统", "架构上下文"],
-     "flowchart LR\n  U([用户]) --> S[本系统]\n  S --> E1[外部系统 A]\n  S --> E2[外部系统 B]\n  classDef person fill:#FBE4D5,stroke:#E9B08A,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  classDef sys fill:#DBEAFE,stroke:#93C5FD,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  classDef ext fill:#F1F3F5,stroke:#ADB5BD,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  class U person;\n  class S sys;\n  class E1,E2 ext;"),
+     "flowchart LR\n  U([用户]) --> S[本系统]\n  S --> E1[外部系统 A]\n  S --> E2[外部系统 B]\n  classDef person fill:#FFE2BB,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  classDef sys fill:#C2E8F7,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  classDef ext fill:#F3F3F4,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  class U person;\n  class S sys;\n  class E1,E2 ext;"),
     ("flow", "flowchart", "arch", "分层架构图（subgraph 当泳道/分层，最稳的架构画法）",
      ["分层架构", "分层图", "泳道", "子系统", "模块图"],
      "flowchart LR\n  subgraph 接入层\n    LB[负载均衡] --> GW[网关]\n  end\n  subgraph 服务层\n    OS[订单服务] --> PS[支付服务]\n  end\n  subgraph 存储层\n    DB[(MySQL)]\n    RD[(Redis)]\n  end\n  GW --> OS\n  OS --> DB\n  OS --> RD"),
@@ -110,7 +110,7 @@ A_FAMILIES = [
      "xychart-beta\n  title \"P99 延迟 (ms)\"\n  x-axis [v1.0, v1.1, v1.2]\n  y-axis \"P99\" 0 --> 400\n  bar [320, 210, 150]\n  line [320, 210, 150]"),
     ("flow", "sankey-beta", "plan", "流量/去向归因（桑基图）",
      ["桑基", "流量", "归因", "sankey"],
-     "sankey-beta\n请求,命中缓存,620\n请求,回源,380\n回源,慢查询,90\n回源,快查询,290"),
+     "sankey-beta\n\nRequest,CacheHit,620\nRequest,Origin,380\nOrigin,SlowQuery,90\nOrigin,FastQuery,290"),
     ("flow", "treemap-beta", "plan", "树图 / 面积占比（层级构成）",
      ["树图", "treemap", "面积"],
      "treemap-beta\n\"根\"\n    \"A\": 30\n    \"B\": 20\n    \"C\": 50"),
@@ -118,6 +118,39 @@ A_FAMILIES = [
      ["雷达", "多指标", "radar"],
      "radar-beta\n  title 健康度\n  axis a[\"错误率\"], b[\"延迟\"], c[\"吞吐\"]\n  curve s1[\"改造前\"]{80, 70, 60}\n  curve s2[\"改造后\"]{40, 35, 90}"),
 ]
+# A 类每个图族的样例 basename —— 与 A_FAMILIES 一一对应。
+# 为什么不能按 type 命名样例：25 个 A 类条目只共用 3 个 spec type（flow/graph/timeline），
+# 按 type 命名会互相覆盖，实测 25 个图族只能落下 6 张样例。
+# 故样例按「图族」命名；flowchart 的 4 个不同场景各占一个键。
+A_EXAMPLE_KEYS = [
+    "flowchart",             # 业务流程（最通用）
+    "flowchart_relation",    # 关系网络 / 拓扑
+    "sequenceDiagram",
+    "stateDiagram-v2",
+    "erDiagram",
+    "classDiagram",
+    "architecture-beta",
+    "C4Context",
+    "flowchart_c4",          # C4 风格的 flowchart 复刻
+    "flowchart_layered",     # 分层架构（subgraph 当泳道）
+    "gantt",
+    "kanban",
+    "journey",
+    "requirementDiagram",
+    "timeline",
+    "mindmap",
+    "gitGraph",
+    "block-beta",
+    "packet-beta",
+    "pie_mermaid",         # 与 B 类 Matplotlib 的 `pie` 区分
+    "quadrantChart",
+    "xychart-beta",
+    "sankey-beta",
+    "treemap-beta",
+    "radar-beta",
+]
+assert len(A_EXAMPLE_KEYS) == len(A_FAMILIES), 'A_EXAMPLE_KEYS 必须与 A_FAMILIES 等长'
+
 
 # ---------------------------------------------------------------------------
 # B 类：type -> (分类, 场景说明, 关键词, specs 文件名)
@@ -176,6 +209,8 @@ B_TYPES = {
     "confusion": ("field", "混淆矩阵（计数/行归一化）", ["混淆矩阵", "confusion", "分类结果"], "b__confusion.json"),
     "clustered_heatmap": ("field", "表达矩阵热图（行列 z-score + 层次聚类重排，不画树）", ["聚类热图", "表达矩阵", "组学", "z-score", "热图重排"], "b__clustered_heatmap.json"),
     "nn_twin": ("field", "神经网络结构示意（单层 vs 多层）", ["网络结构", "MLP", "全连接", "神经元", "网络示意图"], "b__nn_twin.json"),
+    "nn_single": ("field", "单个神经网络结构（神经元级全连接图，不做左右对比）", ["神经网络", "神经元", "全连接网络", "MLP", "网络结构图"], "b__nn_single.json"),
+    "arch_diagram": ("arch", "大模型架构图（编码器/解码器堆叠 + Add & Norm + 残差 + 跨列连接，由 params.columns 描述）", ["大模型架构图", "模型架构", "架构图", "Transformer", "BERT", "GPT", "LLM", "编码器", "解码器", "注意力", "模型结构", "Transformer 架构"], "b__arch_diagram.json"),
     "tensor_blocks": ("field", "0~3 维张量示意", ["张量", "维度", "tensor"], "b__tensor_blocks.json"),
     "tensor_cube_panels": ("field", "三维张量 + 通道混合/独立做法对比", ["张量示意", "通道混合"], "b__tensor_cube_panels.json"),
     "matrix_mul_panels": ("field", "矩阵乘 vs 逐元素乘示意", ["矩阵乘", "逐元素", "broadcast"], "b__matrix_mul_panels.json"),
@@ -231,15 +266,17 @@ def b_types_implemented():
 def entries(include_planned=True):
     """展平成统一的条目列表（A 图族 + B 图型）。"""
     out = []
-    for spec_type, mermaid, cat, scene, kws, tmpl in A_FAMILIES:
+    for _i, (spec_type, mermaid, cat, scene, kws, tmpl) in enumerate(A_FAMILIES):
+        _key = A_EXAMPLE_KEYS[_i]
         out.append({'kind': 'A', 'type': spec_type, 'mermaid': mermaid, 'category': cat,
                     'scene': scene, 'keywords': kws, 'params': [], 'mmd': tmpl,
-                    'example': None, 'planned': False})
+                    'example': 'specs/a__%s.json' % _key, 'example_key': _key,
+                    'planned': False})
     impl = set(b_types_implemented())
     for t, (cat, scene, kws, spec) in B_TYPES.items():
         out.append({'kind': 'B', 'type': t, 'mermaid': None, 'category': cat, 'scene': scene,
                     'keywords': kws, 'params': params_of(t), 'mmd': None,
-                    'example': ('specs/' + spec) if spec else None,
+                    'example': ('specs/' + spec) if spec else None, 'example_key': t,
                     'planned': t not in impl})
     return out
 

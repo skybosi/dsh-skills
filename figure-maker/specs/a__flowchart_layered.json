@@ -1,0 +1,7 @@
+{
+  "id": "flowchart_layered",
+  "type": "flow",
+  "output": "out/flowchart_layered.svg",
+  "title": "分层架构图（subgraph 当泳道/分层，最稳的架构画法）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nflowchart LR\n  subgraph 接入层\n    LB[负载均衡] --> GW[网关]\n  end\n  subgraph 服务层\n    OS[订单服务] --> PS[支付服务]\n  end\n  subgraph 存储层\n    DB[(MySQL)]\n    RD[(Redis)]\n  end\n  GW --> OS\n  OS --> DB\n  OS --> RD\n\nclassDef neutral fill:#F8FBFF,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\nclassDef root fill:#FCE0E1,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\nclassDef category fill:#C2E8F7,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\nclassDef leaf fill:#F3F3F4,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\nclassDef input fill:#FFE2BB,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\nclassDef output fill:#CCE7CF,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\nclassDef warning fill:#F2F4C1,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\nclassDef error fill:#FECACA,stroke:#F87171,stroke-width:1.5px,color:#212529,rx:6,ry:6;"
+}

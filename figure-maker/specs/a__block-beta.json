@@ -1,0 +1,7 @@
+{
+  "id": "block-beta",
+  "type": "flow",
+  "output": "out/block-beta.svg",
+  "title": "块图（矩阵式布局，适合分层/分组摆放）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nblock-beta\n  columns 3\n  A[\"A\"] B[\"B\"] C[\"C\"]\n  D[\"D\"] E[\"E\"] F[\"F\"]"
+}

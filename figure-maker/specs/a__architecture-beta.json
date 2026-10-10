@@ -1,0 +1,7 @@
+{
+  "id": "architecture-beta",
+  "type": "flow",
+  "output": "out/architecture-beta.svg",
+  "title": "图标化系统架构图（组件/部署，带云图标）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\narchitecture-beta\n  group api(cloud)[接入层]\n  service gw(server)[网关] in api\n  service svc(server)[服务] in api\n  service db(database)[数据库]\n  gw:R -- L:svc\n  svc:R -- L:db"
+}

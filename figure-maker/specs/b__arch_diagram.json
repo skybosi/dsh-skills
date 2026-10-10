@@ -1,0 +1,57 @@
+{
+  "id": "arch-diagram",
+  "type": "arch_diagram",
+  "output": "out/arch-diagram.svg",
+  "width_in": 8.6,
+  "params": {
+    "head": [
+      "Linear",
+      "Softmax"
+    ],
+    "head_label": "Output Probabilities",
+    "columns": [
+      {
+        "repeat": "N×",
+        "rail": "left",
+        "input_label": "Inputs",
+        "embed": "Input\nEmbedding",
+        "groups": [
+          {
+            "kind": "attention",
+            "label": "Multi-Head\nAttention",
+            "norm": "Add & Norm"
+          },
+          {
+            "kind": "ffn",
+            "label": "Feed\nForward",
+            "norm": "Add & Norm"
+          }
+        ]
+      },
+      {
+        "repeat": "N×",
+        "rail": "right",
+        "input_label": "Outputs\n(shifted right)",
+        "embed": "Output\nEmbedding",
+        "groups": [
+          {
+            "kind": "attention",
+            "label": "Masked\nMulti-Head\nAttention",
+            "norm": "Add & Norm"
+          },
+          {
+            "kind": "attention",
+            "label": "Multi-Head\nAttention",
+            "norm": "Add & Norm",
+            "cross_from": 0
+          },
+          {
+            "kind": "ffn",
+            "label": "Feed\nForward",
+            "norm": "Add & Norm"
+          }
+        ]
+      }
+    ]
+  }
+}

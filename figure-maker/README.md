@@ -55,13 +55,13 @@ python3 $S --batch specs/                          # 批量出图（仓库自带
 
 ## 能力一览
 
-- **93 个条目**：25 个 Mermaid 图族（结构/关系图）+ 68 种 Matplotlib 数据图（含科研与生医常用图）
+- **95 个条目**：25 个 Mermaid 图族（结构/关系图）+ 70 种 Matplotlib 数据图（含科研与生医常用图）
 - 输出：**svg（默认）/ png / webp** 两类都支持；B 类另支持 `pdf` / `eps` / `ps` / `jpeg` / `tiff`
 - 产物只有两样：**图** + **同目录的元信息**（`<名字>.meta.json`：类型/格式/尺寸/版式检查/原始 spec）
 - 机器版式自检：文字重叠 0、越界 0；A 类还按图型分级检查节点间距（`--check` 可当红线）
 - **选型不靠记清单**：`--recommend "一句话描述"` 直接给候选图型 + 可跑骨架；`--list` 按 14 个场景分类列全部图型
 
-## 全部条目（93 个；其中 70 张带样例图）
+## 全部条目（95 个；其中 95 张带样例图）
 
 > 样例由同名 spec 原样生成：`python3 scripts/build_examples.py --only <图型>`
 
@@ -78,125 +78,190 @@ python3 $S --batch specs/                          # 批量出图（仓库自带
 | 9 | A | 架构与上下文 | [`C4Context`](#c4context) | C4 上下文/容器图（人-系统-外部系统关系） |
 | 10 | A | 架构与上下文 | [`flowchart`](#flowchart) | C4 风格架构图（人/本系统/外部系统 + 关系，用 flowchart 复刻，比 C4Co |
 | 11 | A | 架构与上下文 | [`flowchart`](#flowchart) | 分层架构图（subgraph 当泳道/分层，最稳的架构画法） |
-| 12 | A | 计划与协作 | [`gantt`](#gantt) | 排期 / 甘特图（依赖、里程碑、进度状态） |
-| 13 | A | 计划与协作 | [`kanban`](#kanban) | 看板（待办/进行中/已完成） |
-| 14 | A | 计划与协作 | [`journey`](#journey) | 用户旅程 / 体验地图（分阶段 + 评分） |
-| 15 | A | 计划与协作 | [`requirementDiagram`](#requirementdiagram) | 需求与验证追踪（需求-元素-验证方法） |
-| 16 | A | 计划与协作 | [`timeline`](#timeline) | 时间线 / 演进史 / 里程碑脉络 |
-| 17 | A | 计划与协作 | [`mindmap`](#mindmap) | 思维导图 / 能力拆解 |
-| 18 | A | 计划与协作 | [`gitGraph`](#gitgraph) | Git 分支与合并流（发布/热修流程） |
-| 19 | A | 计划与协作 | [`block-beta`](#block-beta) | 块图（矩阵式布局，适合分层/分组摆放） |
-| 20 | A | 计划与协作 | [`packet-beta`](#packet-beta) | 协议/报文结构（字段位宽） |
-| 21 | A | 计划与协作 | [`pie`](#pie) | 饼图（Mermaid 版，占比） |
-| 22 | A | 计划与协作 | [`quadrantChart`](#quadrantchart) | 四象限优先级（成本×收益、影响×难度） |
-| 23 | A | 计划与协作 | [`xychart-beta`](#xychart-beta) | 简单柱+线指标图（Mermaid 版，轻量） |
-| 24 | A | 计划与协作 | [`sankey-beta`](#sankey-beta) | 流量/去向归因（桑基图） |
-| 25 | A | 计划与协作 | [`treemap-beta`](#treemap-beta) | 树图 / 面积占比（层级构成） |
-| 26 | A | 计划与协作 | [`radar-beta`](#radar-beta) | 雷达图（Mermaid 版，多指标对比） |
-| 27 | B | 对比与构成 | [`bar`](#bar) | 单一维度的类目比大小 / 排名 |
-| 28 | B | 对比与构成 | [`grouped_bar`](#grouped_bar) | 多方案在不同类目上的分组对比 |
-| 29 | B | 对比与构成 | [`stacked_bar`](#stacked_bar) | 构成占比随时间/类目变化（堆叠） |
-| 30 | B | 对比与构成 | [`multi_bar`](#multi_bar) | 多个子图并排的多组柱（跨组对比） |
-| 31 | B | 对比与构成 | [`pie`](#pie) | 整体构成占比（类别少时） |
-| 32 | B | 对比与构成 | [`waterfall`](#waterfall) | 增量分解 / 特征贡献（瀑布图） |
-| 33 | B | 对比与构成 | [`radar`](#radar) | 多指标多方案雷达对比 |
-| 34 | B | 对比与构成 | [`venn2`](#venn2) | 两个集合的交并关系 |
-| 35 | B | 对比与构成 | [`matrix`](#matrix) | 文本表格（参数/结果对照表） |
-| 36 | B | 趋势与曲线 | [`multi_curve`](#multi_curve) | 多条曲线/函数对比（含自定义表达式） |
-| 37 | B | 趋势与曲线 | [`function_curve`](#function_curve) | 单函数曲线（表达式驱动） |
-| 38 | B | 趋势与曲线 | [`area_line`](#area_line) | 带填充的趋势线（强调累积/幅度） |
-| 39 | B | 趋势与曲线 | [`line_band`](#line_band) | 多 run / 多 seed 的均值 ± 标准差（波动带） |
-| 40 | B | 趋势与曲线 | [`errorbar`](#errorbar) | 均值 ± 误差棒（柱或折线带误差） |
-| 41 | B | 趋势与曲线 | [`learning_curve`](#learning_curve) | 训练/验证损失（学习曲线） |
-| 42 | B | 趋势与曲线 | [`twin_axis`](#twin_axis) | 两个量纲不同的指标共图（双轴） |
-| 43 | B | 趋势与曲线 | [`loglog`](#loglog) | 跨数量级的关系（双对数） |
-| 44 | B | 趋势与曲线 | [`elbow`](#elbow) | 肘部法则 / 拐点识别 |
-| 45 | B | 趋势与曲线 | [`regularization_path`](#regularization_path) | 正则路径 / 系数收缩 |
-| 46 | B | 趋势与曲线 | [`spectrum`](#spectrum) | 信号 / 频谱 / 谱图（可标峰值） |
-| 47 | B | 趋势与曲线 | [`multi_subplot`](#multi_subplot) | 多个子图并排（函数/序列逐格对比） |
-| 48 | B | 趋势与曲线 | [`panels`](#panels) | 论文多面板组图（(a)(b)(c) 标签、共享轴） |
-| 49 | B | 分布与统计 | [`normal_dist`](#normal_dist) | 正态分布密度（可填充 ±σ） |
-| 50 | B | 分布与统计 | [`cdf`](#cdf) | 累积分布（理论） |
-| 51 | B | 分布与统计 | [`ecdf`](#ecdf) | 经验累积分布（实测数据对比） |
-| 52 | B | 分布与统计 | [`pmf_pdf`](#pmf_pdf) | 离散 PMF vs 连续 PDF |
-| 53 | B | 分布与统计 | [`hist_fit`](#hist_fit) | 直方图 + 理论密度拟合 |
-| 54 | B | 分布与统计 | [`kde`](#kde) | 核密度估计（可多峰混合） |
-| 55 | B | 分布与统计 | [`boxplot`](#boxplot) | 分组分布对比（箱线图） |
-| 56 | B | 分布与统计 | [`box_jitter`](#box_jitter) | 箱线 + 原始散点抖动（样本量小必用） |
-| 57 | B | 分布与统计 | [`violin`](#violin) | 分布形态对比（小提琴图） |
-| 58 | B | 相关与拟合 | [`scatter_fit`](#scatter_fit) | 散点 + 线性拟合 |
-| 59 | B | 相关与拟合 | [`scatter_classes`](#scatter_classes) | 多类别散点（可带中心点、对数轴） |
-| 60 | B | 相关与拟合 | [`scatter_boundary`](#scatter_boundary) | 分类边界（线性可分 / 不可分） |
-| 61 | B | 相关与拟合 | [`scatter_panels`](#scatter_panels) | 多面板散点（迭代过程可视化） |
-| 62 | B | 相关与拟合 | [`scatter_rich`](#scatter_rich) | 颜色/大小编码的散点（第三四维） |
-| 63 | B | 相关与拟合 | [`scatter_matrix`](#scatter_matrix) | 相关性/协方差矩阵式散点对比 |
-| 64 | B | 相关与拟合 | [`fit_comparison`](#fit_comparison) | 欠拟合/合适/过拟合等拟合对比 |
-| 65 | B | 相关与拟合 | [`fit_band`](#fit_band) | 拟合 + 置信/预测带 |
-| 66 | B | 相关与拟合 | [`parity`](#parity) | 预测 vs 实测 parity（含 R²/MAE/RMSE） |
-| 67 | B | 相关与拟合 | [`residual`](#residual) | 残差诊断图（残差 vs 拟合值 + ±2σ） |
-| 68 | B | 相关与拟合 | [`scatter3d`](#scatter3d) | 三维散点（可选：按类别着色） |
-| 69 | B | 场与矩阵 | [`heatmap`](#heatmap) | 二维热力图（计数/强度，带数值标注） |
-| 70 | B | 场与矩阵 | [`heatmap_panels`](#heatmap_panels) | 多面板热力图（含色条） |
-| 71 | B | 场与矩阵 | [`confusion`](#confusion) | 混淆矩阵（计数/行归一化） |
-| 72 | B | 场与矩阵 | [`clustered_heatmap`](#clustered_heatmap) | 表达矩阵热图（行列 z-score + 层次聚类重排，不画树） |
-| 73 | B | 场与矩阵 | [`nn_twin`](#nn_twin) | 神经网络结构示意（单层 vs 多层） |
-| 74 | B | 场与矩阵 | [`tensor_blocks`](#tensor_blocks) | 0~3 维张量示意 |
-| 75 | B | 场与矩阵 | [`tensor_cube_panels`](#tensor_cube_panels) | 三维张量 + 通道混合/独立做法对比 |
-| 76 | B | 场与矩阵 | [`matrix_mul_panels`](#matrix_mul_panels) | 矩阵乘 vs 逐元素乘示意 |
-| 77 | B | 场与矩阵 | [`contour_quiver`](#contour_quiver) | 等高线 + 梯度场 |
-| 78 | B | 场与矩阵 | [`contourf`](#contourf) | 填充等高线 / 损失曲面（二维替代 3D） |
-| 79 | B | 场与矩阵 | [`surface3d`](#surface3d) | 三维曲面 z=f(x,y)（可选；默认规范建议先用 contourf 做二维表达） |
-| 80 | B | 评估与性能 | [`roc`](#roc) | ROC 曲线与 AUC |
-| 81 | B | 评估与性能 | [`calibration`](#calibration) | 校准/可靠性曲线（含 ECE） |
-| 82 | B | 评估与性能 | [`flamegraph`](#flamegraph) | 火焰图（perf/耗时归因，层级占比） |
-| 83 | B | 评估与性能 | [`roofline`](#roofline) | Roofline 性能模型（算力/带宽上界） |
-| 84 | B | 优化与几何 | [`gradient_descent`](#gradient_descent) | 梯度下降轨迹示意 |
-| 85 | B | 优化与几何 | [`multi_panel_gd`](#multi_panel_gd) | 不同学习率的下降轨迹对比 |
-| 86 | B | 优化与几何 | [`optimizer_paths`](#optimizer_paths) | 优化器路径对比（SGD/Adam…） |
-| 87 | B | 优化与几何 | [`tangent_secant`](#tangent_secant) | 割线逼近切线（导数含义） |
-| 88 | B | 优化与几何 | [`limit`](#limit) | 极限逼近示意 |
-| 89 | B | 优化与几何 | [`differential`](#differential) | 微分 dy 与增量 Δy |
-| 90 | B | 优化与几何 | [`vector2d`](#vector2d) | 二维向量 / 夹角 / 相似度 |
-| 91 | B | 生医与统计推断 | [`km`](#km) | Kaplan-Meier 生存曲线（含删失与风险表） |
-| 92 | B | 生医与统计推断 | [`forest`](#forest) | 森林图 / 效应量与置信区间 |
-| 93 | B | 生医与统计推断 | [`volcano`](#volcano) | 火山图（差异表达：log2FC vs -log10 p） |
+| 12 | B | 架构与上下文 | [`arch_diagram`](#arch_diagram) | 大模型架构图（编码器/解码器堆叠 + Add & Norm + 残差 + 跨列连接，由 pa |
+| 13 | A | 计划与协作 | [`gantt`](#gantt) | 排期 / 甘特图（依赖、里程碑、进度状态） |
+| 14 | A | 计划与协作 | [`kanban`](#kanban) | 看板（待办/进行中/已完成） |
+| 15 | A | 计划与协作 | [`journey`](#journey) | 用户旅程 / 体验地图（分阶段 + 评分） |
+| 16 | A | 计划与协作 | [`requirementDiagram`](#requirementdiagram) | 需求与验证追踪（需求-元素-验证方法） |
+| 17 | A | 计划与协作 | [`timeline`](#timeline) | 时间线 / 演进史 / 里程碑脉络 |
+| 18 | A | 计划与协作 | [`mindmap`](#mindmap) | 思维导图 / 能力拆解 |
+| 19 | A | 计划与协作 | [`gitGraph`](#gitgraph) | Git 分支与合并流（发布/热修流程） |
+| 20 | A | 计划与协作 | [`block-beta`](#block-beta) | 块图（矩阵式布局，适合分层/分组摆放） |
+| 21 | A | 计划与协作 | [`packet-beta`](#packet-beta) | 协议/报文结构（字段位宽） |
+| 22 | A | 计划与协作 | [`pie`](#pie) | 饼图（Mermaid 版，占比） |
+| 23 | A | 计划与协作 | [`quadrantChart`](#quadrantchart) | 四象限优先级（成本×收益、影响×难度） |
+| 24 | A | 计划与协作 | [`xychart-beta`](#xychart-beta) | 简单柱+线指标图（Mermaid 版，轻量） |
+| 25 | A | 计划与协作 | [`sankey-beta`](#sankey-beta) | 流量/去向归因（桑基图） |
+| 26 | A | 计划与协作 | [`treemap-beta`](#treemap-beta) | 树图 / 面积占比（层级构成） |
+| 27 | A | 计划与协作 | [`radar-beta`](#radar-beta) | 雷达图（Mermaid 版，多指标对比） |
+| 28 | B | 对比与构成 | [`bar`](#bar) | 单一维度的类目比大小 / 排名 |
+| 29 | B | 对比与构成 | [`grouped_bar`](#grouped_bar) | 多方案在不同类目上的分组对比 |
+| 30 | B | 对比与构成 | [`stacked_bar`](#stacked_bar) | 构成占比随时间/类目变化（堆叠） |
+| 31 | B | 对比与构成 | [`multi_bar`](#multi_bar) | 多个子图并排的多组柱（跨组对比） |
+| 32 | B | 对比与构成 | [`pie`](#pie) | 整体构成占比（类别少时） |
+| 33 | B | 对比与构成 | [`waterfall`](#waterfall) | 增量分解 / 特征贡献（瀑布图） |
+| 34 | B | 对比与构成 | [`radar`](#radar) | 多指标多方案雷达对比 |
+| 35 | B | 对比与构成 | [`venn2`](#venn2) | 两个集合的交并关系 |
+| 36 | B | 对比与构成 | [`matrix`](#matrix) | 文本表格（参数/结果对照表） |
+| 37 | B | 趋势与曲线 | [`multi_curve`](#multi_curve) | 多条曲线/函数对比（含自定义表达式） |
+| 38 | B | 趋势与曲线 | [`function_curve`](#function_curve) | 单函数曲线（表达式驱动） |
+| 39 | B | 趋势与曲线 | [`area_line`](#area_line) | 带填充的趋势线（强调累积/幅度） |
+| 40 | B | 趋势与曲线 | [`line_band`](#line_band) | 多 run / 多 seed 的均值 ± 标准差（波动带） |
+| 41 | B | 趋势与曲线 | [`errorbar`](#errorbar) | 均值 ± 误差棒（柱或折线带误差） |
+| 42 | B | 趋势与曲线 | [`learning_curve`](#learning_curve) | 训练/验证损失（学习曲线） |
+| 43 | B | 趋势与曲线 | [`twin_axis`](#twin_axis) | 两个量纲不同的指标共图（双轴） |
+| 44 | B | 趋势与曲线 | [`loglog`](#loglog) | 跨数量级的关系（双对数） |
+| 45 | B | 趋势与曲线 | [`elbow`](#elbow) | 肘部法则 / 拐点识别 |
+| 46 | B | 趋势与曲线 | [`regularization_path`](#regularization_path) | 正则路径 / 系数收缩 |
+| 47 | B | 趋势与曲线 | [`spectrum`](#spectrum) | 信号 / 频谱 / 谱图（可标峰值） |
+| 48 | B | 趋势与曲线 | [`multi_subplot`](#multi_subplot) | 多个子图并排（函数/序列逐格对比） |
+| 49 | B | 趋势与曲线 | [`panels`](#panels) | 论文多面板组图（(a)(b)(c) 标签、共享轴） |
+| 50 | B | 分布与统计 | [`normal_dist`](#normal_dist) | 正态分布密度（可填充 ±σ） |
+| 51 | B | 分布与统计 | [`cdf`](#cdf) | 累积分布（理论） |
+| 52 | B | 分布与统计 | [`ecdf`](#ecdf) | 经验累积分布（实测数据对比） |
+| 53 | B | 分布与统计 | [`pmf_pdf`](#pmf_pdf) | 离散 PMF vs 连续 PDF |
+| 54 | B | 分布与统计 | [`hist_fit`](#hist_fit) | 直方图 + 理论密度拟合 |
+| 55 | B | 分布与统计 | [`kde`](#kde) | 核密度估计（可多峰混合） |
+| 56 | B | 分布与统计 | [`boxplot`](#boxplot) | 分组分布对比（箱线图） |
+| 57 | B | 分布与统计 | [`box_jitter`](#box_jitter) | 箱线 + 原始散点抖动（样本量小必用） |
+| 58 | B | 分布与统计 | [`violin`](#violin) | 分布形态对比（小提琴图） |
+| 59 | B | 相关与拟合 | [`scatter_fit`](#scatter_fit) | 散点 + 线性拟合 |
+| 60 | B | 相关与拟合 | [`scatter_classes`](#scatter_classes) | 多类别散点（可带中心点、对数轴） |
+| 61 | B | 相关与拟合 | [`scatter_boundary`](#scatter_boundary) | 分类边界（线性可分 / 不可分） |
+| 62 | B | 相关与拟合 | [`scatter_panels`](#scatter_panels) | 多面板散点（迭代过程可视化） |
+| 63 | B | 相关与拟合 | [`scatter_rich`](#scatter_rich) | 颜色/大小编码的散点（第三四维） |
+| 64 | B | 相关与拟合 | [`scatter_matrix`](#scatter_matrix) | 相关性/协方差矩阵式散点对比 |
+| 65 | B | 相关与拟合 | [`fit_comparison`](#fit_comparison) | 欠拟合/合适/过拟合等拟合对比 |
+| 66 | B | 相关与拟合 | [`fit_band`](#fit_band) | 拟合 + 置信/预测带 |
+| 67 | B | 相关与拟合 | [`parity`](#parity) | 预测 vs 实测 parity（含 R²/MAE/RMSE） |
+| 68 | B | 相关与拟合 | [`residual`](#residual) | 残差诊断图（残差 vs 拟合值 + ±2σ） |
+| 69 | B | 相关与拟合 | [`scatter3d`](#scatter3d) | 三维散点（可选：按类别着色） |
+| 70 | B | 场与矩阵 | [`heatmap`](#heatmap) | 二维热力图（计数/强度，带数值标注） |
+| 71 | B | 场与矩阵 | [`heatmap_panels`](#heatmap_panels) | 多面板热力图（含色条） |
+| 72 | B | 场与矩阵 | [`confusion`](#confusion) | 混淆矩阵（计数/行归一化） |
+| 73 | B | 场与矩阵 | [`clustered_heatmap`](#clustered_heatmap) | 表达矩阵热图（行列 z-score + 层次聚类重排，不画树） |
+| 74 | B | 场与矩阵 | [`nn_twin`](#nn_twin) | 神经网络结构示意（单层 vs 多层） |
+| 75 | B | 场与矩阵 | [`nn_single`](#nn_single) | 单个神经网络结构（神经元级全连接图，不做左右对比） |
+| 76 | B | 场与矩阵 | [`tensor_blocks`](#tensor_blocks) | 0~3 维张量示意 |
+| 77 | B | 场与矩阵 | [`tensor_cube_panels`](#tensor_cube_panels) | 三维张量 + 通道混合/独立做法对比 |
+| 78 | B | 场与矩阵 | [`matrix_mul_panels`](#matrix_mul_panels) | 矩阵乘 vs 逐元素乘示意 |
+| 79 | B | 场与矩阵 | [`contour_quiver`](#contour_quiver) | 等高线 + 梯度场 |
+| 80 | B | 场与矩阵 | [`contourf`](#contourf) | 填充等高线 / 损失曲面（二维替代 3D） |
+| 81 | B | 场与矩阵 | [`surface3d`](#surface3d) | 三维曲面 z=f(x,y)（可选；默认规范建议先用 contourf 做二维表达） |
+| 82 | B | 评估与性能 | [`roc`](#roc) | ROC 曲线与 AUC |
+| 83 | B | 评估与性能 | [`calibration`](#calibration) | 校准/可靠性曲线（含 ECE） |
+| 84 | B | 评估与性能 | [`flamegraph`](#flamegraph) | 火焰图（perf/耗时归因，层级占比） |
+| 85 | B | 评估与性能 | [`roofline`](#roofline) | Roofline 性能模型（算力/带宽上界） |
+| 86 | B | 优化与几何 | [`gradient_descent`](#gradient_descent) | 梯度下降轨迹示意 |
+| 87 | B | 优化与几何 | [`multi_panel_gd`](#multi_panel_gd) | 不同学习率的下降轨迹对比 |
+| 88 | B | 优化与几何 | [`optimizer_paths`](#optimizer_paths) | 优化器路径对比（SGD/Adam…） |
+| 89 | B | 优化与几何 | [`tangent_secant`](#tangent_secant) | 割线逼近切线（导数含义） |
+| 90 | B | 优化与几何 | [`limit`](#limit) | 极限逼近示意 |
+| 91 | B | 优化与几何 | [`differential`](#differential) | 微分 dy 与增量 Δy |
+| 92 | B | 优化与几何 | [`vector2d`](#vector2d) | 二维向量 / 夹角 / 相似度 |
+| 93 | B | 生医与统计推断 | [`km`](#km) | Kaplan-Meier 生存曲线（含删失与风险表） |
+| 94 | B | 生医与统计推断 | [`forest`](#forest) | 森林图 / 效应量与置信区间 |
+| 95 | B | 生医与统计推断 | [`volcano`](#volcano) | 火山图（差异表达：log2FC vs -log10 p） |
 
-### A 类样例图（6 张，来自 specs/a__*.json）
+### A 类样例图（25 张，来自 specs/a__*.json）
 
-<a id="a-flow"></a>
-**`flow`**
+<a id="a-flowchart"></a>
+**`flowchart`**
 
-![flow](docs/examples/flow.svg)
+![flowchart](docs/examples/flowchart.svg)
 
-<sub>spec：<code>specs/a__flow.json</code></sub>
+<sub>spec：<code>specs/a__flowchart.json</code></sub>
 
-<a id="a-graph"></a>
-**`graph`**
+<a id="a-flowchart_relation"></a>
+**`flowchart_relation`**
 
-![graph](docs/examples/graph.svg)
+![flowchart_relation](docs/examples/flowchart_relation.svg)
 
-<sub>spec：<code>specs/a__graph.json</code></sub>
+<sub>spec：<code>specs/a__flowchart_relation.json</code></sub>
 
-<a id="a-tree"></a>
-**`tree`**
+<a id="a-sequenceDiagram"></a>
+**`sequenceDiagram`**
 
-![tree](docs/examples/tree.svg)
+![sequenceDiagram](docs/examples/sequenceDiagram.svg)
 
-<sub>spec：<code>specs/a__tree.json</code></sub>
+<sub>spec：<code>specs/a__sequenceDiagram.json</code></sub>
 
-<a id="a-nn_diagram"></a>
-**`nn_diagram`**
+<a id="a-stateDiagram-v2"></a>
+**`stateDiagram-v2`**
 
-![nn_diagram](docs/examples/nn_diagram.svg)
+![stateDiagram-v2](docs/examples/stateDiagram-v2.svg)
 
-<sub>spec：<code>specs/a__nn_diagram.json</code></sub>
+<sub>spec：<code>specs/a__stateDiagram-v2.json</code></sub>
 
-<a id="a-ladder"></a>
-**`ladder`**
+<a id="a-erDiagram"></a>
+**`erDiagram`**
 
-![ladder](docs/examples/ladder.svg)
+![erDiagram](docs/examples/erDiagram.svg)
 
-<sub>spec：<code>specs/a__ladder.json</code></sub>
+<sub>spec：<code>specs/a__erDiagram.json</code></sub>
+
+<a id="a-classDiagram"></a>
+**`classDiagram`**
+
+![classDiagram](docs/examples/classDiagram.svg)
+
+<sub>spec：<code>specs/a__classDiagram.json</code></sub>
+
+<a id="a-architecture-beta"></a>
+**`architecture-beta`**
+
+![architecture-beta](docs/examples/architecture-beta.svg)
+
+<sub>spec：<code>specs/a__architecture-beta.json</code></sub>
+
+<a id="a-C4Context"></a>
+**`C4Context`**
+
+![C4Context](docs/examples/C4Context.svg)
+
+<sub>spec：<code>specs/a__C4Context.json</code></sub>
+
+<a id="a-flowchart_c4"></a>
+**`flowchart_c4`**
+
+![flowchart_c4](docs/examples/flowchart_c4.svg)
+
+<sub>spec：<code>specs/a__flowchart_c4.json</code></sub>
+
+<a id="a-flowchart_layered"></a>
+**`flowchart_layered`**
+
+![flowchart_layered](docs/examples/flowchart_layered.svg)
+
+<sub>spec：<code>specs/a__flowchart_layered.json</code></sub>
+
+<a id="a-gantt"></a>
+**`gantt`**
+
+![gantt](docs/examples/gantt.svg)
+
+<sub>spec：<code>specs/a__gantt.json</code></sub>
+
+<a id="a-kanban"></a>
+**`kanban`**
+
+![kanban](docs/examples/kanban.svg)
+
+<sub>spec：<code>specs/a__kanban.json</code></sub>
+
+<a id="a-journey"></a>
+**`journey`**
+
+![journey](docs/examples/journey.svg)
+
+<sub>spec：<code>specs/a__journey.json</code></sub>
+
+<a id="a-requirementDiagram"></a>
+**`requirementDiagram`**
+
+![requirementDiagram](docs/examples/requirementDiagram.svg)
+
+<sub>spec：<code>specs/a__requirementDiagram.json</code></sub>
 
 <a id="a-timeline"></a>
 **`timeline`**
@@ -205,12 +270,82 @@ python3 $S --batch specs/                          # 批量出图（仓库自带
 
 <sub>spec：<code>specs/a__timeline.json</code></sub>
 
+<a id="a-mindmap"></a>
+**`mindmap`**
+
+![mindmap](docs/examples/mindmap.svg)
+
+<sub>spec：<code>specs/a__mindmap.json</code></sub>
+
+<a id="a-gitGraph"></a>
+**`gitGraph`**
+
+![gitGraph](docs/examples/gitGraph.svg)
+
+<sub>spec：<code>specs/a__gitGraph.json</code></sub>
+
+<a id="a-block-beta"></a>
+**`block-beta`**
+
+![block-beta](docs/examples/block-beta.svg)
+
+<sub>spec：<code>specs/a__block-beta.json</code></sub>
+
+<a id="a-packet-beta"></a>
+**`packet-beta`**
+
+![packet-beta](docs/examples/packet-beta.svg)
+
+<sub>spec：<code>specs/a__packet-beta.json</code></sub>
+
+<a id="a-pie_mermaid"></a>
+**`pie_mermaid`**
+
+![pie_mermaid](docs/examples/pie_mermaid.svg)
+
+<sub>spec：<code>specs/a__pie_mermaid.json</code></sub>
+
+<a id="a-quadrantChart"></a>
+**`quadrantChart`**
+
+![quadrantChart](docs/examples/quadrantChart.svg)
+
+<sub>spec：<code>specs/a__quadrantChart.json</code></sub>
+
+<a id="a-xychart-beta"></a>
+**`xychart-beta`**
+
+![xychart-beta](docs/examples/xychart-beta.svg)
+
+<sub>spec：<code>specs/a__xychart-beta.json</code></sub>
+
+<a id="a-sankey-beta"></a>
+**`sankey-beta`**
+
+![sankey-beta](docs/examples/sankey-beta.svg)
+
+<sub>spec：<code>specs/a__sankey-beta.json</code></sub>
+
+<a id="a-treemap-beta"></a>
+**`treemap-beta`**
+
+![treemap-beta](docs/examples/treemap-beta.svg)
+
+<sub>spec：<code>specs/a__treemap-beta.json</code></sub>
+
+<a id="a-radar-beta"></a>
+**`radar-beta`**
+
+![radar-beta](docs/examples/radar-beta.svg)
+
+<sub>spec：<code>specs/a__radar-beta.json</code></sub>
+
 ### A/B · 流程与决策（业务流程、算法流程、判定分支与回退）
 
 <a id="flowchart"></a>
 **`flowchart`** —— 业务流程 / 算法流程 / 判定与回退（最通用）
 
-<sub>A 类：`mmd` 里写 `flowchart`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `flowchart`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flowchart.svg`](#a-flowchart)</sub>
 
 <a id="swimlane"></a>
 **`swimlane`** —— 泳道图 / 跨职能流程图（原生绘制，最可控）
@@ -224,75 +359,82 @@ python3 $S --batch specs/                          # 批量出图（仓库自带
 <a id="sequencediagram"></a>
 **`sequenceDiagram`** —— 接口调用链 / 消息时序（含 alt 分支、Note、激活块）
 
-<sub>A 类：`mmd` 里写 `sequenceDiagram`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `sequenceDiagram`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/sequenceDiagram.svg`](#a-sequenceDiagram)</sub>
 
 ### A · 状态与生命周期（订单/任务/连接的状态迁移）
 
 <a id="statediagram-v2"></a>
 **`stateDiagram-v2`** —— 状态机 / 状态迁移（支持复合状态与 note）
 
-<sub>A 类：`mmd` 里写 `stateDiagram-v2`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `stateDiagram-v2`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/stateDiagram-v2.svg`](#a-stateDiagram-v2)</sub>
 
 ### A · 数据与领域模型（ER 关系图、类图、业务关系图）
 
 <a id="flowchart"></a>
 **`flowchart`** —— 关系网络 / 拓扑（无方向的连接关系）
 
-<sub>A 类：`mmd` 里写 `flowchart`，spec 的 `type` 填 `graph`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/graph.svg`](#a-graph)</sub>
+<sub>A 类：`mmd` 里写 `flowchart`，spec 的 `type` 填 `graph`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flowchart_relation.svg`](#a-flowchart_relation)</sub>
 
 <a id="erdiagram"></a>
 **`erDiagram`** —— ER 图 / 数据模型 / 业务实体关系（含主外键与基数）
 
-<sub>A 类：`mmd` 里写 `erDiagram`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `erDiagram`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/erDiagram.svg`](#a-erDiagram)</sub>
 
 <a id="classdiagram"></a>
 **`classDiagram`** —— 类图 / 领域模型（属性、方法、多重度、依赖）
 
-<sub>A 类：`mmd` 里写 `classDiagram`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `classDiagram`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/classDiagram.svg`](#a-classDiagram)</sub>
 
 ### A · 架构与上下文（系统架构、分层、部署、C4 上下文）
 
 <a id="architecture-beta"></a>
 **`architecture-beta`** —— 图标化系统架构图（组件/部署，带云图标）
 
-<sub>A 类：`mmd` 里写 `architecture-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `architecture-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/architecture-beta.svg`](#a-architecture-beta)</sub>
 
 <a id="c4context"></a>
 **`C4Context`** —— C4 上下文/容器图（人-系统-外部系统关系）
 
-<sub>A 类：`mmd` 里写 `C4Context`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `C4Context`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/C4Context.svg`](#a-C4Context)</sub>
 
 <a id="flowchart"></a>
 **`flowchart`** —— C4 风格架构图（人/本系统/外部系统 + 关系，用 flowchart 复刻，比 C4Context 可控）
 
-<sub>A 类：`mmd` 里写 `flowchart`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `flowchart`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flowchart_c4.svg`](#a-flowchart_c4)</sub>
 
 <a id="flowchart"></a>
 **`flowchart`** —— 分层架构图（subgraph 当泳道/分层，最稳的架构画法）
 
-<sub>A 类：`mmd` 里写 `flowchart`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `flowchart`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flowchart_layered.svg`](#a-flowchart_layered)</sub>
+
+<a id="arch_diagram"></a>
+**`arch_diagram`** —— 大模型架构图（编码器/解码器堆叠 + Add & Norm + 残差 + 跨列连接，由 params.columns 描述）
+
+![arch_diagram](docs/examples/arch_diagram.svg)
+
+<sub>spec：<code>specs/b__arch_diagram.json</code> ｜ 参数键：bus_gap · columns · head · head_label</sub>
 
 ### A · 计划与协作（排期、看板、旅程、需求、里程碑、分支流）
 
 <a id="gantt"></a>
 **`gantt`** —— 排期 / 甘特图（依赖、里程碑、进度状态）
 
-<sub>A 类：`mmd` 里写 `gantt`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `gantt`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/gantt.svg`](#a-gantt)</sub>
 
 <a id="kanban"></a>
 **`kanban`** —— 看板（待办/进行中/已完成）
 
-<sub>A 类：`mmd` 里写 `kanban`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `kanban`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/kanban.svg`](#a-kanban)</sub>
 
 <a id="journey"></a>
 **`journey`** —— 用户旅程 / 体验地图（分阶段 + 评分）
 
-<sub>A 类：`mmd` 里写 `journey`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `journey`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/journey.svg`](#a-journey)</sub>
 
 <a id="requirementdiagram"></a>
 **`requirementDiagram`** —— 需求与验证追踪（需求-元素-验证方法）
 
-<sub>A 类：`mmd` 里写 `requirementDiagram`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `requirementDiagram`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/requirementDiagram.svg`](#a-requirementDiagram)</sub>
 
 <a id="timeline"></a>
 **`timeline`** —— 时间线 / 演进史 / 里程碑脉络
@@ -302,52 +444,52 @@ python3 $S --batch specs/                          # 批量出图（仓库自带
 <a id="mindmap"></a>
 **`mindmap`** —— 思维导图 / 能力拆解
 
-<sub>A 类：`mmd` 里写 `mindmap`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `mindmap`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/mindmap.svg`](#a-mindmap)</sub>
 
 <a id="gitgraph"></a>
 **`gitGraph`** —— Git 分支与合并流（发布/热修流程）
 
-<sub>A 类：`mmd` 里写 `gitGraph`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `gitGraph`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/gitGraph.svg`](#a-gitGraph)</sub>
 
 <a id="block-beta"></a>
 **`block-beta`** —— 块图（矩阵式布局，适合分层/分组摆放）
 
-<sub>A 类：`mmd` 里写 `block-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `block-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/block-beta.svg`](#a-block-beta)</sub>
 
 <a id="packet-beta"></a>
 **`packet-beta`** —— 协议/报文结构（字段位宽）
 
-<sub>A 类：`mmd` 里写 `packet-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `packet-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/packet-beta.svg`](#a-packet-beta)</sub>
 
 <a id="pie"></a>
 **`pie`** —— 饼图（Mermaid 版，占比）
 
-<sub>A 类：`mmd` 里写 `pie`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `pie`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/pie_mermaid.svg`](#a-pie_mermaid)</sub>
 
 <a id="quadrantchart"></a>
 **`quadrantChart`** —— 四象限优先级（成本×收益、影响×难度）
 
-<sub>A 类：`mmd` 里写 `quadrantChart`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `quadrantChart`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/quadrantChart.svg`](#a-quadrantChart)</sub>
 
 <a id="xychart-beta"></a>
 **`xychart-beta`** —— 简单柱+线指标图（Mermaid 版，轻量）
 
-<sub>A 类：`mmd` 里写 `xychart-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `xychart-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/xychart-beta.svg`](#a-xychart-beta)</sub>
 
 <a id="sankey-beta"></a>
 **`sankey-beta`** —— 流量/去向归因（桑基图）
 
-<sub>A 类：`mmd` 里写 `sankey-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `sankey-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/sankey-beta.svg`](#a-sankey-beta)</sub>
 
 <a id="treemap-beta"></a>
 **`treemap-beta`** —— 树图 / 面积占比（层级构成）
 
-<sub>A 类：`mmd` 里写 `treemap-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `treemap-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/treemap-beta.svg`](#a-treemap-beta)</sub>
 
 <a id="radar-beta"></a>
 **`radar-beta`** —— 雷达图（Mermaid 版，多指标对比）
 
-<sub>A 类：`mmd` 里写 `radar-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flow.svg`](#a-flow)</sub>
+<sub>A 类：`mmd` 里写 `radar-beta`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/radar-beta.svg`](#a-radar-beta)</sub>
 
 ### B · 对比与构成（类目之间比大小、构成占比、增量分解）
 
@@ -687,6 +829,13 @@ python3 $S --batch specs/                          # 批量出图（仓库自带
 ![nn_twin](docs/examples/nn_twin.svg)
 
 <sub>spec：<code>specs/b__nn_twin.json</code> ｜ 参数键：left · right</sub>
+
+<a id="nn_single"></a>
+**`nn_single`** —— 单个神经网络结构（神经元级全连接图，不做左右对比）
+
+![nn_single](docs/examples/nn_single.svg)
+
+<sub>spec：<code>specs/b__nn_single.json</code> ｜ 参数键：layer_labels · layers</sub>
 
 <a id="tensor_blocks"></a>
 **`tensor_blocks`** —— 0~3 维张量示意

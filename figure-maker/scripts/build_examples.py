@@ -28,15 +28,28 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     only = {x.strip() for x in a.only.split(',') if x.strip()}
     import draw as D
+    # 样例名冲突检测：两个 spec 映射到同一个 <key>.svg 会互相覆盖
+    # （真实踩过：A 类图族 `pie` 与 B 类 `pie` 同名，样例被后者覆盖）
+    _seen = {}
     ok = bad = warn = 0
     for name in sorted(os.listdir(a.specs)):
         if not name.endswith('.json'):
             continue
         spec = json.load(open(os.path.join(a.specs, name), encoding='utf-8'))
         t = spec.get('type')
-        if only and t not in only:
+        # A 类样例按「图族」命名，不按 type：25 个 A 类条目只共用 3 个 type
+        # （flow/graph/timeline），按 type 命名会互相覆盖、只能落下 6 张。
+        # 约定：A 类 spec 名为 a__<key>.json，样例即 <key>.svg。
+        key = name[3:-5] if (t in D.A_TYPES and name.startswith('a__')) else t
+        if only and t not in only and key not in only:
             continue
-        out = os.path.join(a.out, '%s.svg' % t)
+        if key in _seen:
+            print('❌ 样例名冲突：%s 与 %s 都映射到 %s.svg（改其中之一的 key）'
+                  % (name, _seen[key], key))
+            bad += 1
+            continue
+        _seen[key] = name
+        out = os.path.join(a.out, '%s.svg' % key)
         try:
             checks = D.render_a(spec, out) if t in D.A_TYPES else D.render_b(spec, out)
             good = D._quick_ok(checks)

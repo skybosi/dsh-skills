@@ -1,0 +1,7 @@
+{
+  "id": "erDiagram",
+  "type": "flow",
+  "output": "out/erDiagram.svg",
+  "title": "ER 图 / 数据模型 / 业务实体关系（含主外键与基数）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nerDiagram\n  USER ||--o{ ORDER : places\n  ORDER ||--|{ ORDER_ITEM : contains\n  USER {\n    string id PK\n    string name\n  }\n  ORDER {\n    string id PK\n    string user_id FK\n  }"
+}

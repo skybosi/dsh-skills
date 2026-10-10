@@ -1,0 +1,7 @@
+{
+  "id": "C4Context",
+  "type": "flow",
+  "output": "out/C4Context.svg",
+  "title": "C4 上下文/容器图（人-系统-外部系统关系）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nC4Context\n  title 系统上下文\n  Person(user, \"用户\", \"说明\")\n  System(sys, \"本系统\", \"说明\")\n  System_Ext(ext, \"外部系统\", \"说明\")\n  Rel(user, sys, \"使用\")\n  Rel(sys, ext, \"调用\")"
+}

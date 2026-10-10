@@ -1,0 +1,7 @@
+{
+  "id": "journey",
+  "type": "flow",
+  "output": "out/journey.svg",
+  "title": "用户旅程 / 体验地图（分阶段 + 评分）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\njourney\n  title 用户旅程\n  section 浏览\n    进入首页: 5: 用户\n  section 下单\n    提交订单: 3: 用户, 系统"
+}

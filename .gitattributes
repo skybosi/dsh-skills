@@ -1,0 +1,25 @@
+# 换行统一：仓库内存 LF，检出也用 LF
+#
+# 起因：工作区的换行是混的 —— B 类样例（Matplotlib 产出）是 CRLF，
+# A 类样例（Mermaid 产出）是 LF。凡是 core.autocrlf 未开启的环境
+# （Linux / macOS / CI、部分编辑器与 IDE），那批 CRLF 文件都会被
+# 误报成「已修改」—— 实测本仓库有 149 个跟踪文件受影响。
+#
+# 加这条规则后：blob 仍是 LF（本来就是），检出统一 LF，
+# 任何 autocrlf 设置下 git status 都干净。
+* text=auto eol=lf
+
+# 二进制：一律不做文本/换行处理
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.eps   binary
+*.ps    binary
+*.tif   binary
+*.tiff  binary
+*.woff  binary
+*.woff2 binary

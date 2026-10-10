@@ -1,0 +1,7 @@
+{
+  "id": "mindmap",
+  "type": "flow",
+  "output": "out/mindmap.svg",
+  "title": "思维导图 / 能力拆解",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nmindmap\n  root((主题))\n    分支一\n      子项 A\n      子项 B\n    分支二\n      子项 C"
+}

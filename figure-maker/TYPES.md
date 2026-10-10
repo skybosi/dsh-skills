@@ -8,7 +8,7 @@
 | 类 | 数量 | 渲染器 | spec 里给什么 | 产物格式 |
 |---|---|---|---|---|
 | **A 类 · 结构/关系图** | 25 个 Mermaid 图族（6 个入口名等价） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
-| **B 类 · 数据/统计/科研图** | 68 种 | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff |
+| **B 类 · 数据/统计/科研图** | 70 种 | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff |
 
 ## 场景分类总览
 
@@ -18,13 +18,13 @@
 | `interaction` | A | 1 | 接口调用顺序、消息交互、上下游协作 |
 | `state` | A | 1 | 订单/任务/连接的状态迁移 |
 | `model` | A | 3 | ER 关系图、类图、业务关系图 |
-| `arch` | A | 4 | 系统架构、分层、部署、C4 上下文 |
+| `arch` | A | 5 | 系统架构、分层、部署、C4 上下文 |
 | `plan` | A | 15 | 排期、看板、旅程、需求、里程碑、分支流 |
 | `compare` | B | 9 | 类目之间比大小、构成占比、增量分解 |
 | `trend` | B | 13 | 随自变量变化、多 run 均值±波动、指标曲线 |
 | `dist` | B | 9 | 分布形态、分位数、经验分布、离散概率 |
 | `relate` | B | 11 | 两变量关系、拟合、残差、相关性矩阵 |
-| `field` | B | 11 | 热力图、混淆矩阵、张量、网络结构、等高线、3D 曲面 |
+| `field` | B | 12 | 热力图、混淆矩阵、张量、网络结构、等高线、3D 曲面 |
 | `eval` | B | 4 | 模型质量与工程性能（ROC/校准/火焰图） |
 | `math` | B | 7 | 梯度下降、切线/极限、向量与微分示意 |
 | `bio` | B | 3 | 生存曲线、森林图、火山图、组学热图 |
@@ -89,7 +89,7 @@ A 类的 6 个入口名（`flow` `graph` `tree` `nn_diagram` `ladder` `timeline`
 | `treemap-beta` | `flow` | 树图 / 面积占比（层级构成） | 树图 · treemap · 面积 |
 | `radar-beta` | `flow` | 雷达图（Mermaid 版，多指标对比） | 雷达 · 多指标 · radar |
 
-## B 类 · 数据图（68 种）
+## B 类 · 数据图（70 种）
 
 `参数键` 一列由 `drawers.py` 源码自动抽取（`p.get("…")`），不会和实现漂移；
 嵌套结构（`panels[]` `series[]` `groups[]` `curves[]` 等）见 [docs/SPEC-REFERENCE.md](docs/SPEC-REFERENCE.md)。
@@ -99,6 +99,12 @@ A 类的 6 个入口名（`flow` `graph` `tree` `nn_diagram` `ladder` `timeline`
 | 图型 | 场景 | 关键词 | 参数键 | 样例 |
 |---|---|---|---|---|
 | `swimlane` | 泳道图 / 跨职能流程图（原生绘制，最可控） | 泳道图 · 跨职能 · swimlane · 泳道 · 责任分工 | `direction` · `edges` · `lanes` · `row_height` · `step_width` · `steps` | [spec](specs/b__swimlane.json) · [SVG](docs/examples/swimlane.svg) |
+
+### 架构与上下文（arch）—— 系统架构、分层、部署、C4 上下文
+
+| 图型 | 场景 | 关键词 | 参数键 | 样例 |
+|---|---|---|---|---|
+| `arch_diagram` | 大模型架构图（编码器/解码器堆叠 + Add & Norm + 残差 + 跨列连接，由 params.columns 描述） | 架构图 · Transformer · BERT · GPT · 编码器 · 解码器 · 注意力 · 模型结构 · 神经网络结构 | `bus_gap` · `columns` · `head` · `head_label` | [spec](specs/b__arch_diagram.json) · [SVG](docs/examples/arch_diagram.svg) |
 
 ### 对比与构成（compare）—— 类目之间比大小、构成占比、增量分解
 
@@ -171,6 +177,7 @@ A 类的 6 个入口名（`flow` `graph` `tree` `nn_diagram` `ladder` `timeline`
 | `confusion` | 混淆矩阵（计数/行归一化） | 混淆矩阵 · confusion · 分类结果 | `annot_fmt` · `cmap` · `colorbar` · `colorbar_label` · `data` · `labels` · `matrix` · `metrics_in_figure` · `metrics_loc` · `normalize` · `xlabel` · `ylabel` | [spec](specs/b__confusion.json) · [SVG](docs/examples/confusion.svg) |
 | `clustered_heatmap` | 表达矩阵热图（行列 z-score + 层次聚类重排，不画树） | 聚类热图 · 表达矩阵 · 组学 · z-score · 热图重排 | `cluster` · `cmap` · `col_labels` · `colorbar` · `colorbar_label` · `data` · `dendrogram` · `row_labels` · `xlabel` · `ylabel` · `zscore` | [spec](specs/b__clustered_heatmap.json) · [SVG](docs/examples/clustered_heatmap.svg) |
 | `nn_twin` | 神经网络结构示意（单层 vs 多层） | 网络结构 · MLP · 全连接 · 神经元 · 网络示意图 | `left` · `right` | [spec](specs/b__nn_twin.json) · [SVG](docs/examples/nn_twin.svg) |
+| `nn_single` | 单个神经网络结构（神经元级全连接图，不做左右对比） | 神经网络 · 神经元 · 全连接网络 · MLP · 网络结构图 | `layer_labels` · `layers` | [spec](specs/b__nn_single.json) · [SVG](docs/examples/nn_single.svg) |
 | `tensor_blocks` | 0~3 维张量示意 | 张量 · 维度 · tensor | — | [spec](specs/b__tensor_blocks.json) · [SVG](docs/examples/tensor_blocks.svg) |
 | `tensor_cube_panels` | 三维张量 + 通道混合/独立做法对比 | 张量示意 · 通道混合 | — | [spec](specs/b__tensor_cube_panels.json) · [SVG](docs/examples/tensor_cube_panels.svg) |
 | `matrix_mul_panels` | 矩阵乘 vs 逐元素乘示意 | 矩阵乘 · 逐元素 · broadcast | — | [spec](specs/b__matrix_mul_panels.json) · [SVG](docs/examples/matrix_mul_panels.svg) |
@@ -312,7 +319,7 @@ C4Context
   System(sys, "本系统", "说明")
   System_Ext(ext, "外部系统", "说明")
   Rel(user, sys, "使用")
-  Rel(sys, ext, "调用"
+  Rel(sys, ext, "调用")
 ```
 
 **flowchart** —— C4 风格架构图（人/本系统/外部系统 + 关系，用 flowchart 复刻，比 C4Context 可控）（spec 的 `type` 填 `flow`）
@@ -322,9 +329,9 @@ flowchart LR
   U([用户]) --> S[本系统]
   S --> E1[外部系统 A]
   S --> E2[外部系统 B]
-  classDef person fill:#FBE4D5,stroke:#E9B08A,stroke-width:1.5px,color:#212529,rx:6,ry:6;
-  classDef sys fill:#DBEAFE,stroke:#93C5FD,stroke-width:1.5px,color:#212529,rx:6,ry:6;
-  classDef ext fill:#F1F3F5,stroke:#ADB5BD,stroke-width:1.5px,color:#212529,rx:6,ry:6;
+  classDef person fill:#FFE2BB,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;
+  classDef sys fill:#C2E8F7,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;
+  classDef ext fill:#F3F3F4,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;
   class U person;
   class S sys;
   class E1,E2 ext;
@@ -494,10 +501,11 @@ xychart-beta
 
 ```mermaid
 sankey-beta
-请求,命中缓存,620
-请求,回源,380
-回源,慢查询,90
-回源,快查询,290
+
+Request,CacheHit,620
+Request,Origin,380
+Origin,SlowQuery,90
+Origin,FastQuery,290
 ```
 
 **treemap-beta** —— 树图 / 面积占比（层级构成）（spec 的 `type` 填 `flow`）
@@ -526,6 +534,7 @@ radar-beta
 |---|---|---|
 | 泳道图（跨职能流程） | ✅ 已支持：B 类 `swimlane`（`lanes` + `steps` + `edges`，原生绘制，布局可控） | 直接 `--example swimlane` |
 | 聚类树（dendrogram） | ✅ 已支持：`clustered_heatmap` 给 `dendrogram: true`（平均连接层次聚类 + 行/列树） | 需要更专业的树请用 scipy/seaborn |
+| 桑基图 `sankey-beta` | ⚠️ 内置 Mermaid 的 sankey **只接受 ASCII 节点名**：源/目标含中文（即使加引号）都会解析失败 | 节点名用英文（数值与结构不受影响）；或用 B 类 `waterfall` / `stacked_bar` 表达构成与流向 |
 | ZenUML | ❌ 内置的单文件 mermaid bundle 不含该图型 | 渲染器会**直接给出** `sequenceDiagram` 骨架（alt/loop/par/Note 都支持） |
 | C4 上下文 / 容器图 | ⚠️ 能出图，但 Mermaid 的 C4 自动布局容易把描述文字和关系标签叠在一起（会告警 + 给建议） | 用 `flowchart` 复刻 C4 风格（见上方 arch 分类的骨架），或缩短 description |
 | gitGraph | ⚠️ commit 标签多时容易互相压 | 减少分支/提交，或拆图 |

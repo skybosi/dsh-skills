@@ -6,6 +6,7 @@
 check_layout() 把《布局质量红线》做成**可量化检查**（量文字 bbox：重叠 / 越出画布），
 结果写进 JSON，供《布局检查》表引用 —— 不靠自述打勾。
 """
+import colorsys
 import json
 import os
 
@@ -19,25 +20,91 @@ import matplotlib.pyplot as plt
 from matplotlib.text import Text
 
 # ---- 规范色板（唯一来源，禁止 Matplotlib 默认色）----
-SOFT_COLORS = {
-    "blue":   "#93C5FD",
-    "red":    "#F87171",
-    "green":  "#86EFAC",
-    "purple": "#C4B5FD",
-    "orange": "#E9B08A",
-    "grey":   "#9CA3AF",
-    "dark":   "#4B5563",
+# 色系取自 Vaswani et al. 2017《Attention Is All You Need》Figure 1 原图。
+#
+# 论文原图只有「淡色填充」这一个层级，而本 skill 需要两个层级：
+#   FILL[*]        —— 大面积填充（节点底、色块）
+#   SOFT_COLORS[*] —— 同色系的描边 / 系列色（线、柱、标记、A 类节点边框）
+# 两级若取同一个值，A 类节点就「填充与边框同色」→ 边框直接看不见（实测类图分隔线消失）。
+# 故 SOFT_COLORS 由论文淡色按 HLS 明度压暗一档派生，保持同一色系并恢复两级层次。
+# 论文原图没有独立的红与中性灰，red / grey / dark / FILL["neutral"] / FILL["error"]
+# 保留原值，继续承担「错误告警」与「中性」语义。
+
+
+def _shade(hex_color, l_factor=0.84):
+    """同色系压暗一档，派生「描边 / 系列色」层。"""
+    h = hex_color.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+    hh, ll, ss = colorsys.rgb_to_hls(r, g, b)
+    r2, g2, b2 = colorsys.hls_to_rgb(hh, max(0.0, min(1.0, ll * l_factor)), ss)
+    return "#%02X%02X%02X" % (round(r2 * 255), round(g2 * 255), round(b2 * 255))
+
+
+# 论文原图实测的淡色（唯一来源：下面 SOFT_COLORS 与 FILL 都从这里取）
+_PAPER_TINT = {
+    "blue":   "#C2E8F7",   # Feed Forward 天蓝
+    "green":  "#CCE7CF",   # Softmax 淡绿
+    "orange": "#FFE2BB",   # Multi-Head Attention 蜜桃橙
+    "purple": "#FCE0E1",   # Embedding 粉
 }
-# 语义填充/描边（A 类结构图用；B 类少量场景也用）
+SOFT_COLORS = {k: _shade(v) for k, v in _PAPER_TINT.items()}
+SOFT_COLORS.update({
+    "red":    "#F87171",   # 论文色板无红，保留原值承担「错误 / 告警」语义
+    "grey":   "#9CA3AF",   # 论文色板无「中性系列灰」这一角色，保留原值
+    "dark":   "#4B5563",   # 无对应色，保留
+})
+# 语义填充/描边。论文原图统一是「淡色填充 + 深色描边」，故 STROKE 走深色而非同色系深一号。
+# 注意：STROKE 在本次改动前**全仓无任何引用**（A 类配色原本内联在 render-mermaid.js 里），
+# 现由 style.role_colors() 与 A 类主题共同使用。
 FILL = {
-    "neutral":  "#F8FBFF", "root": "#E9D5FF", "category": "#DBEAFE", "leaf": "#F1F3F5",
-    "input": "#FBE4D5", "output": "#D1FAE5", "warning": "#FEF3C7", "error": "#FECACA",
+    "neutral":  "#F8FBFF", "root": _PAPER_TINT["purple"], "category": _PAPER_TINT["blue"],
+    "leaf": "#F3F3F4", "input": _PAPER_TINT["orange"], "output": _PAPER_TINT["green"],
+    "warning": "#F2F4C1", "error": "#FECACA",
+    "muted": "#D0D4E2",       # 论文「Linear」淡紫灰：比 leaf 更冷一档的中性填充
 }
 STROKE = {
-    "neutral":  "#93C5FD", "root": "#C4B5FD", "category": "#93C5FD", "leaf": "#ADB5BD",
-    "input": "#E9B08A", "output": "#86EFAC", "warning": "#FCD34D", "error": "#F87171",
+    "neutral":  "#212529", "root": "#212529", "category": "#212529", "leaf": "#212529",
+    "input": "#212529", "output": "#212529", "warning": "#212529", "error": "#F87171",
+    "muted": "#212529",
 }
 INK = {"title": "#212529", "text": "#212529", "axis": "#4B5563", "tick": "#6B7280"}
+
+# ---- 语义角色 → FILL / STROKE 槽位 ----
+# 数据图按「轴 / 序列」组织颜色；结构图（架构、流程、网络）需要按「组件语义」着色。
+# 这一层只做映射，**不新增任何色值**：同一语义角色在所有结构图里必须同色。
+# 新增结构图时先在这里登记角色，不要在 drawer 里内联 hex。
+ROLES = {
+    "attention": "input",      # 注意力类子层
+    "ffn":       "category",   # 前馈 / 变换类子层
+    "norm":      "warning",    # 归一化、残差合并等粘合操作
+    "embedding": "root",       # 嵌入 / 查表层
+    "project":   "muted",      # 线性投影等中性组件（论文用淡紫灰）
+    "output":    "output",     # 输出分布 / Softmax
+    "block":     "leaf",       # 容器 / 背景框
+}
+
+
+def role_colors(role):
+    """按语义角色取 (填充色, 描边色)。角色未登记直接报错，不静默退化。"""
+    slot = ROLES.get(role)
+    if slot is None:
+        raise SystemExit("未登记的语义角色：%s（可选：%s）" % (role, "、".join(sorted(ROLES))))
+    return FILL[slot], STROKE[slot]
+
+
+def palette_payload():
+    """给 A 类 JS 渲染器的色板载荷（扁平：SOFT_COLORS + FILL + STROKE 带 stroke_ 前缀）。
+
+    A 类走 render-mermaid.js，同色板原本在 JS 里另存了一份 —— 两处定义必然漂移
+    （改了一边另一边没改，A/B 配色就会分裂）。现在由 draw.py 把本函数的返回值写成
+    临时 JSON 传给渲染器，**Python 侧是唯一来源**；JS 内置的默认值只在脱离 draw.py
+    单独调用渲染器时兜底。
+    """
+    d = dict(SOFT_COLORS)
+    d.update(FILL)
+    d.update({"stroke_" + k: v for k, v in STROKE.items()})
+    d.update({"ink_" + k: v for k, v in INK.items()})
+    return d
 
 # 旧 manifest 里的饱和色 → 新色板（规范：颜色只能从 SOFT_COLORS 取；数据本身不动）
 LEGACY_COLOR_MAP = {
@@ -112,6 +179,13 @@ def save(fig, out_path, title=None, fmt=None, dpi=300):
     if fmt not in ('svg', 'png', 'pdf', 'eps', 'ps', 'jpeg', 'tif', 'tiff', 'webp'):
         raise ValueError('不支持的输出格式：%s' % fmt)
     os.makedirs(os.path.dirname(out_path) or '.', exist_ok=True)
+    # 让输出**逐字节可复现**：
+    #   svg.hashsalt 固定 → Matplotlib 生成的元素 id（id="m406f77eea2"）不再随机；
+    #   metadata Date=None → 不再写入 <dc:date>当前时间</dc:date>。
+    # 否则同一 spec 每次的 SVG 字节都不同：人眼一样，但 git diff / CI 全是噪音。
+    import matplotlib as _mpl
+    _mpl.rcParams['svg.hashsalt'] = 'figure-maker'
+    _meta = {'Date': None}
     if fmt == 'webp':
         try:
             import io
@@ -119,11 +193,11 @@ def save(fig, out_path, title=None, fmt=None, dpi=300):
         except ImportError:
             raise RuntimeError('输出 webp 需要 Pillow：pip install Pillow')
         buf = io.BytesIO()
-        fig.savefig(buf, format='png', dpi=dpi, facecolor="#FFFFFF")
+        fig.savefig(buf, format='png', dpi=dpi, facecolor="#FFFFFF", metadata=_meta)
         buf.seek(0)
         Image.open(buf).convert('RGB').save(out_path, 'WEBP', quality=95, method=6)
         return out_path
-    fig.savefig(out_path, format=fmt, dpi=dpi, facecolor="#FFFFFF")
+    fig.savefig(out_path, format=fmt, dpi=dpi, facecolor="#FFFFFF", metadata=_meta)
     return out_path
 
 

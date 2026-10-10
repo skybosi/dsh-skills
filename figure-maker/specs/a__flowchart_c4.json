@@ -1,0 +1,7 @@
+{
+  "id": "flowchart_c4",
+  "type": "flow",
+  "output": "out/flowchart_c4.svg",
+  "title": "C4 风格架构图（人/本系统/外部系统 + 关系，用 flowchart 复刻，比 C4Context 可控）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nflowchart LR\n  U([用户]) --> S[本系统]\n  S --> E1[外部系统 A]\n  S --> E2[外部系统 B]\n  classDef person fill:#FFE2BB,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  classDef sys fill:#C2E8F7,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  classDef ext fill:#F3F3F4,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  class U person;\n  class S sys;\n  class E1,E2 ext;"
+}

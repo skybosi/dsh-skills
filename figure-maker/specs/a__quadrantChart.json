@@ -1,0 +1,7 @@
+{
+  "id": "quadrantChart",
+  "type": "flow",
+  "output": "out/quadrantChart.svg",
+  "title": "四象限优先级（成本×收益、影响×难度）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nquadrantChart\n  title 优先级\n  x-axis 成本低 --> 成本高\n  y-axis 影响小 --> 影响大\n  quadrant-1 尽快做\n  quadrant-2 排期做\n  quadrant-3 有空再说\n  quadrant-4 别做\n  事项 A: [0.25, 0.85]\n  事项 B: [0.8, 0.4]"
+}

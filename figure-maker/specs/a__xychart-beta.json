@@ -1,0 +1,7 @@
+{
+  "id": "xychart-beta",
+  "type": "flow",
+  "output": "out/xychart-beta.svg",
+  "title": "简单柱+线指标图（Mermaid 版，轻量）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nxychart-beta\n  title \"P99 延迟 (ms)\"\n  x-axis [v1.0, v1.1, v1.2]\n  y-axis \"P99\" 0 --> 400\n  bar [320, 210, 150]\n  line [320, 210, 150]"
+}

@@ -1,6 +1,6 @@
 ---
 name: figure-maker
-description: Use when the user wants to draw or update a figure — flowcharts, sequence/architecture diagrams, or data/statistical/scientific charts (说「画张图」「画个流程图」「画个时序图」「改成柱状图」「出一张热力图」「画个生存曲线」). 91 catalog entries (24 Mermaid structural families + 67 Matplotlib data types incl. research/bio), fixed soft palette, machine layout self-checks, multi-format output (svg/png/webp/pdf). Fully standalone — depends on nothing but this skill directory.
+description: Use when the user wants to draw or update a figure — flowcharts, sequence/architecture diagrams, or data/statistical/scientific charts (说「画张图」「画个流程图」「画个时序图」「改成柱状图」「出一张热力图」「画个生存曲线」). 95 catalog entries (25 Mermaid entries covering 22 diagram types + 70 Matplotlib data types incl. research/bio), fixed soft palette, machine layout self-checks, multi-format output (svg/png/webp/pdf). Fully standalone — depends on nothing but this skill directory.
 whenToUse: 用户要**画图/生成图表**（结构图、流程图、时序图、架构图、数据图、统计图、论文图）时说「画一张」「来张柱状图/热力图/流程图/时序图」「把这个数据画出来」时，先加载本 skill。仅生成 AI 生图提示词的需求请用 gen-image / article-cover-designer。
 ---
 
@@ -16,7 +16,7 @@ whenToUse: 用户要**画图/生成图表**（结构图、流程图、时序图�
 
 ## 第一步永远是选型：先分类，再路由
 
-图型有 93 个条目（25 个 Mermaid 图族 + 68 种数据图），**不要靠记忆挑**，按下面三步走：
+图型有 95 个条目（25 个 Mermaid 图族 + 70 种数据图），**不要靠记忆挑**，按下面三步走：
 
 | 情况 | 动作 |
 |---|---|
@@ -46,10 +46,10 @@ python3 $S --example line_band                 # 该图型的真实骨架（取�
 
 | 类 | 数量 | 渲染器 | spec 里给什么 | 产物格式 |
 |---|---|---|---|---|
-| **A 类 · 结构/关系图** | 25 个 Mermaid 图族（`type` 填 6 个入口名中任意一个） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
-| **B 类 · 数据/统计/科研图** | 68 种（含 `swimlane` 泳道图） | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff |
+| **A 类 · 结构/关系图** | 25 个 Mermaid 图族（覆盖 22 个 Mermaid 图型）（`type` 填 6 个入口名中任意一个） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
+| **B 类 · 数据/统计/科研图** | 70 种（含 `swimlane` 泳道图） | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff |
 
-A 类不限于 24 个图族 —— 凡 Mermaid v11 支持的图型都能画（`flowchart` `sequenceDiagram` `stateDiagram-v2`
+A 类不限于这 22 个图型 —— 凡 Mermaid v11 支持的图型都能画（`flowchart` `sequenceDiagram` `stateDiagram-v2`
 `classDiagram` `erDiagram` `architecture-beta` `C4Context` `gantt` `kanban` `journey` `requirementDiagram`
 `timeline` `mindmap` `gitGraph` `block-beta` `packet-beta` `pie` `quadrantChart` `xychart-beta` `sankey-beta`
 `treemap-beta` `radar-beta` …）。**明确不可用**：`zenuml`（内置 bundle 不含该图型）—— 这时渲染器会**直接打印可替代的骨架**（改用 `sequenceDiagram`）并以退出码 4 结束，不用你自己猜。
@@ -118,6 +118,19 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 `background`（**仅 A 类**：默认 `true` 给 SVG 加纯白底；`false` = 透明底，用于必须叠在深色底上的场合）。
 嵌套参数（`panels[]` `series[]` `groups[]` `curves[]` `bins[]` `items[]` …）见 [docs/SPEC-REFERENCE.md](./docs/SPEC-REFERENCE.md)。
 
+## 输出可复现性的实测口径（别把话说满）
+
+- **几何/视觉是确定的**：同一 spec 每次都画出同一张图，不随运行变化。
+- **B 类（Matplotlib）逐字节一致**：`save()` 里固定了 `svg.hashsalt` 并把 `metadata['Date']`
+  置空 —— 否则 Matplotlib 会写入 `<dc:date>当前时间</dc:date>`、并给元素 id 加随机后缀
+  （`id="m406f77eea2"`），同一 spec 每次的字节都不同，git diff / CI 全是噪音。
+- **A 类（Mermaid）多数逐字节一致，7 个图型例外**：实测连续两次重生成 98 张样例，
+  **91 张字节相同**；`architecture-beta` `classDiagram` `erDiagram` `flowchart_c4` `gitGraph`
+  `requirementDiagram` `stateDiagram-v2` 这几张的**个别贝塞尔控制点**会浮动
+  （端点、元素 id、整体布局都不变，肉眼无差别），根因在 Mermaid 内部的曲线采样。
+  渲染前已 `await document.fonts.ready`，字体不是原因；`curve` 设 basis 或 linear 都一样。
+- 结论：**要逐字节 diff，别把 `docs/examples/` 里那 7 张当基线**；要稳定的回归基线看 `meta.layout` 与 `--check`。
+
 ## 输出格式
 
 | 格式 | 适用 | 说明 |
@@ -146,7 +159,7 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 | 文字越界（出画布） | **0** | 同上；右缘 x 与 y 都要看 |
 | A 类节点间距 | **按图型分级**：flowchart ≥20px；状态/类/ER/需求图 ≥12px；其它图型不套用 | 渲染器内部判定，结果写进 meta 的 `layout.gapMin/nodeGap` |
 | A 类内容越界 | 0（否则**自动扩画布**兜底，扩了多少记在 `layout.canvasFitted`） | 自动；`autofit: false` 可关 |
-| 长标签折行 | 无"标点开头/结尾"的丑折行 | 目视；中文按视觉宽度折行 |
+| 长标签折行 | 无"标点开头/结尾"的丑折行；手写 `<br/>` 各行视觉宽度不得悬殊（最短 ≥ 最长×0.45，首行除外） | 目视；渲染器按视觉宽度自动检测，结果写进 `meta.warnings` |
 
 **检查语义**：默认**只告警不拦截**（结果写进 `meta.layout`，stdout 打印「通过 / 有告警」）；
 加 `--check` 才当红线（不过关退出码 1）。A 类渲染器的退出码约定：`0` 全绿 / `1` 已出图但版式不过 / `2` 用法错误 / `3` 渲染失败。
@@ -166,6 +179,10 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
    **都不会被解码**，图上会原样显示成 `&#35;` / `&#EF4444` 这种噪音（真实踩过：ladder 样例把配色色号写进了标签）。
    想写 `#` 就直接写 `#`；要配色请用 `classDef` / `style`。渲染器会检测并给出提示（写进 `meta.warnings`）
 11. **量纲不同别共用一根轴**：用 `twin_axis` 或 `multi_subplot`；跨轴比"交点"没有意义（`twin_axis` 的 `mark_crossing` 默认关闭）
+12. **A 类标签别乱用手写 `<br/>`**：`htmlLabels:false` 下 Mermaid **只在空格处换行**，于是
+    - **英文标签**：不要手写 `<br/>`，交给自动换行，行宽自然均衡（真实踩过：`a__flow` 逐步 `<br/>` 断成 8 行，节点又高又窄、短行悬在框中央）；
+    - **中文标签**没有空格、**必须**手写 `<br/>`，但要**断在词 / 短语边界**（真实踩过：`a__graph` 把「用户-物品交互矩阵」断成「用户-」+「物品交互矩阵」，把「物品」劈开了），并让各行视觉宽度接近。
+    渲染器会按视觉宽度（全角记 2）检测"长短悬殊"并给提示（写进 `meta.warnings`），首行不参与判定（短首行当小标题是合理写法）
 
 ## 依赖与安装
 
@@ -187,13 +204,13 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 | 加 A 类图族 | 在 `catalog.py` 的 `A_FAMILIES` 里加一行（含起手骨架，用 `--recommend` 直接给用户） |
 | 重生成样例 | `python3 scripts/build_examples.py`（写 `docs/examples/*.svg`） |
 | 重生成文档 | `python3 scripts/build_docs.py`（写 `TYPES.md` + 刷新 `README.md` 画廊） |
-| 回归自测 | `python3 scripts/draw.py --batch specs/ --check`（73 个示例 spec 应全绿） |
+| 回归自测 | `python3 scripts/draw.py --batch specs/ --check`（98 个示例 spec 应全绿） |
 
 ## 当前状态
 
-- ✅ 93 个条目全部可用：25 个 Mermaid 图族 + 68 种数据图（含科研/生医/3D/泳道图）
+- ✅ 95 个条目全部可用：25 个 Mermaid 图族（覆盖 22 个 Mermaid 图型）+ 70 种数据图（含科研/生医/3D/泳道图）
 - ✅ 选型层：`--recommend` / `--list <分类>` / `--catalog --json` / `--example`
-- ✅ 73 个示例 spec + 73 张样例图（`specs/` 与 `docs/examples/`），`--batch --check` 全绿
+- ✅ 98 个示例 spec + 98 张样例图（`specs/` 与 `docs/examples/`），95 个条目**全部有样例**，`--batch --check` 全绿
 - ✅ A 类：标题不再裁切、退出码分级（渲染失败 vs 版式不过）、按图型分级阈值、软色板注入主题
 - ✅ B 类：`heatmap` 色阶按数据取值域、`twin_axis` 标签可配、`heatmap_panels` 面板标签生效、`bar` 兼容 `categories`
 - ✅ 泳道图 `swimlane`（原生绘制）· 聚类热图 `dendrogram: true`（行列层次聚类树）

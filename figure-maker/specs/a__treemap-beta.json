@@ -1,0 +1,7 @@
+{
+  "id": "treemap-beta",
+  "type": "flow",
+  "output": "out/treemap-beta.svg",
+  "title": "树图 / 面积占比（层级构成）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\ntreemap-beta\n\"根\"\n    \"A\": 30\n    \"B\": 20\n    \"C\": 50"
+}

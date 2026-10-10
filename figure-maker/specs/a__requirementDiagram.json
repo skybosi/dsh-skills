@@ -1,0 +1,7 @@
+{
+  "id": "requirementDiagram",
+  "type": "flow",
+  "output": "out/requirementDiagram.svg",
+  "title": "需求与验证追踪（需求-元素-验证方法）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\nrequirementDiagram\n  requirement req1 {\n    id: 1\n    text: \"同一订单只生效一次\"\n    risk: high\n    verifymethod: test\n  }\n  element svc {\n    type: service\n  }\n  svc - satisfies -> req1"
+}

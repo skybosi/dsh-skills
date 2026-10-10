@@ -1,0 +1,7 @@
+{
+  "id": "gitGraph",
+  "type": "flow",
+  "output": "out/gitGraph.svg",
+  "title": "Git 分支与合并流（发布/热修流程）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\ngitGraph\n  commit id: \"init\"\n  branch develop\n  commit id: \"feat\"\n  checkout main\n  merge develop tag: \"v1.0.0\""
+}

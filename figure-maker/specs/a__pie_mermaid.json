@@ -1,0 +1,7 @@
+{
+  "id": "pie_mermaid",
+  "type": "flow",
+  "output": "out/pie_mermaid.svg",
+  "title": "饼图（Mermaid 版，占比）",
+  "mmd": "%%{init: {'flowchart': {'nodeSpacing': 24, 'rankSpacing': 28, 'curve': 'linear', 'padding': 12}}}%%\npie showData\n  title 占比\n  \"A\" : 45\n  \"B\" : 30\n  \"C\" : 25"
+}
