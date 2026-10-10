@@ -1,7 +1,7 @@
 ---
 name: figure-maker
-description: Use when the user wants to draw or update a figure — flowcharts, sequence/architecture diagrams, or data/statistical/scientific charts (说「画张图」「画个流程图」「画个时序图」「改成柱状图」「出一张热力图」「画个生存曲线」). 95 catalog entries (25 Mermaid entries covering 22 diagram types + 70 Matplotlib data types incl. research/bio), fixed soft palette, machine layout self-checks, multi-format output (svg/png/webp/pdf). Fully standalone — depends on nothing but this skill directory.
-whenToUse: 用户要**画图/生成图表**（结构图、流程图、时序图、架构图、数据图、统计图、论文图）时说「画一张」「来张柱状图/热力图/流程图/时序图」「把这个数据画出来」时，先加载本 skill。仅生成 AI 生图提示词的需求请用 gen-image / article-cover-designer。
+description: Use when the user wants to draw or update a figure — flowcharts, sequence/state/ER/class diagrams, system or model architecture diagrams (incl. Transformer/LLM block diagrams and neuron-level NN structures), swimlanes, or data/statistical/scientific charts (说「画张图」「画个流程图」「画个时序图」「画个架构图」「画个神经网络结构」「改成柱状图」「出一张热力图」「画个生存曲线」). 95 catalog entries (25 Mermaid entries covering 22 diagram types + 70 Matplotlib data types incl. research/bio), single-source soft palette, machine layout self-checks, byte-reproducible output, multi-format (svg/png/webp/pdf). Fully standalone — depends on nothing but this skill directory.
+whenToUse: 用户要**画图/生成图表**时先加载本 skill：结构图（流程图、时序图、状态机、ER/类图、泳道图）、架构图（系统分层、Transformer/LLM 模块图、神经元级网络结构）、数据与统计图（柱状/折线/热力/散点/箱线/生存曲线/混淆矩阵/火焰图…）、论文插图（多面板组图、误差棒、均值±波动带）。触发说法如「画一张」「来张柱状图/热力图/流程图/时序图」「画个架构图」「把这个数据画出来」。仅生成 AI 生图提示词的需求请用 gen-image / article-cover-designer。
 ---
 
 # figure-maker · 确定性的矢量图绘制
@@ -47,7 +47,7 @@ python3 $S --example line_band                 # 该图型的真实骨架（取�
 | 类 | 数量 | 渲染器 | spec 里给什么 | 产物格式 |
 |---|---|---|---|---|
 | **A 类 · 结构/关系图** | 25 个 Mermaid 图族（覆盖 22 个 Mermaid 图型）（`type` 填 6 个入口名中任意一个） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
-| **B 类 · 数据/统计/科研图** | 70 种（含 `swimlane` 泳道图） | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff |
+| **B 类 · 数据/统计/科研图** | 70 种（含 `swimlane` 泳道图、`nn_single` 神经网络结构、`arch_diagram` 大模型架构图） | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff（`jpg` / `tif` 也可） |
 
 A 类不限于这 22 个图型 —— 凡 Mermaid v11 支持的图型都能画（`flowchart` `sequenceDiagram` `stateDiagram-v2`
 `classDiagram` `erDiagram` `architecture-beta` `C4Context` `gantt` `kanban` `journey` `requirementDiagram`
@@ -143,7 +143,10 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 
 ## 风格规范（保持一致才好看）
 
-- **软色板**：`style.py` 的 `SOFT_COLORS`（蓝/绿/橙/紫/红/灰 + 深灰）；**≤4 个语义色**，同义同色；顺序色图由 `_soft_cmap` 从同一色板生成
+- **软色板（唯一来源是 `style.py`）**：`_PAPER_TINT`（论文原色：蓝 `#C2E8F7` / 绿 `#CCE7CF` / 橙 `#FFE2BB` / 紫 `#FCE0E1`）
+  → `_shade(l_factor=0.84)` 派生出 `SOFT_COLORS`（更饱和，用于线 / 柱 / 标记 / A 类节点边框）；`FILL` / `STROKE` / `INK` 同源；
+  `ROLES` 把语义角色（`attention` `ffn` `norm` `embedding` `project` `output` `block`）映射到色槽。**≤4 个语义色**，同义同色；顺序色图由 `_soft_cmap` 从同一色板生成
+- **改配色只需改一处**：A 类（Mermaid）主题由 `style.palette_payload()` 经 `--palette` 注入 `themeVariables`，所以改 `_PAPER_TINT`（或 `_shade` 的 `l_factor`，越小越深）后**两类图一起变**，改完记得跑 `build_examples.py` 重生成样例
 - **无阴影、无渐变**；去掉上/右边框；网格是**极浅虚线**；背景纯白
 - **字体**：系统无衬线（`PingFang SC` / `Noto Sans SC` / `Microsoft YaHei`）；字号下限 9px
 - **A 类**：`htmlLabels: false`（部分渲染环境不支持 foreignObject）、曲线默认平滑 `basis`、
@@ -203,13 +206,16 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 | 加/改图型 | 在 `scripts/drawers.py` 加 `draw_<name>()` 并登记到 `DRAWERS`；在 `scripts/catalog.py` 的 `B_TYPES` 里补一行（分类/场景/关键词/示例）|
 | 加 A 类图族 | 在 `catalog.py` 的 `A_FAMILIES` 里加一行（含起手骨架，用 `--recommend` 直接给用户） |
 | 重生成样例 | `python3 scripts/build_examples.py`（写 `docs/examples/*.svg`） |
-| 重生成文档 | `python3 scripts/build_docs.py`（写 `TYPES.md` + 刷新 `README.md` 画廊） |
+| 改配色 | 改 `scripts/style.py` 的 `_PAPER_TINT`（或 `_shade` 的 `l_factor`）→ 两类图一起变；然后重生成样例与文档 |
+| 重生成文档 | `python3 scripts/build_docs.py`（写 `TYPES.md` + 刷新 `README.md` 画廊）。⚠️ 改过 `catalog.py`（分类/关键词/示例）后**必须重跑**，否则生成类文档会与代码漂移 |
 | 回归自测 | `python3 scripts/draw.py --batch specs/ --check`（98 个示例 spec 应全绿） |
 
 ## 当前状态
 
 - ✅ 95 个条目全部可用：25 个 Mermaid 图族（覆盖 22 个 Mermaid 图型）+ 70 种数据图（含科研/生医/3D/泳道图）
 - ✅ 选型层：`--recommend` / `--list <分类>` / `--catalog --json` / `--example`
+- ✅ 两个新图型：`nn_single`（神经元级全连接，含跨层连线）、`arch_diagram`（大模型架构图：编码器/解码器堆叠 + Add & Norm + 残差 + 跨列连接）
+- ✅ 配色单一来源（`_PAPER_TINT` → `SOFT_COLORS` / `FILL` / `ROLES`，A 类经 `--palette` 同源）；B 类输出**逐字节可复现**
 - ✅ 98 个示例 spec + 98 张样例图（`specs/` 与 `docs/examples/`），95 个条目**全部有样例**，`--batch --check` 全绿
 - ✅ A 类：标题不再裁切、退出码分级（渲染失败 vs 版式不过）、按图型分级阈值、软色板注入主题
 - ✅ B 类：`heatmap` 色阶按数据取值域、`twin_axis` 标签可配、`heatmap_panels` 面板标签生效、`bar` 兼容 `categories`

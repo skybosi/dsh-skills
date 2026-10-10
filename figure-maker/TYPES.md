@@ -104,7 +104,7 @@ A 类的 6 个入口名（`flow` `graph` `tree` `nn_diagram` `ladder` `timeline`
 
 | 图型 | 场景 | 关键词 | 参数键 | 样例 |
 |---|---|---|---|---|
-| `arch_diagram` | 大模型架构图（编码器/解码器堆叠 + Add & Norm + 残差 + 跨列连接，由 params.columns 描述） | 架构图 · Transformer · BERT · GPT · 编码器 · 解码器 · 注意力 · 模型结构 · 神经网络结构 | `bus_gap` · `columns` · `head` · `head_label` | [spec](specs/b__arch_diagram.json) · [SVG](docs/examples/arch_diagram.svg) |
+| `arch_diagram` | 大模型架构图（编码器/解码器堆叠 + Add & Norm + 残差 + 跨列连接，由 params.columns 描述） | 大模型架构图 · 模型架构 · 架构图 · Transformer · BERT · GPT · LLM · 编码器 · 解码器 · 注意力 · 模型结构 · Transformer 架构 | `bus_gap` · `columns` · `head` · `head_label` | [spec](specs/b__arch_diagram.json) · [SVG](docs/examples/arch_diagram.svg) |
 
 ### 对比与构成（compare）—— 类目之间比大小、构成占比、增量分解
 

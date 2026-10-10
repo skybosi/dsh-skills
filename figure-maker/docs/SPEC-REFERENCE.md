@@ -65,10 +65,13 @@
 | `series[]` | 多曲线/多组：`line_band` `ecdf` `radar` `kde` `multi_curve` `loglog` | `label` · `mean`/`y`/`values`/`seeds`（多次实验，自动算均值±std）· `std`/`lo`/`hi` · `color` · `fill` |
 | `groups[]` | 分组数据：`errorbar` `violin` `box_jitter` `km` `scatter3d` `fit_comparison` `boxplot` | `label` · `values`/`data` · `errors`（误差棒）· `times`+`events`（生存）· `x`/`y`/`z`（3D）· `color` |
 | `categories`/`labels` + `values` | `bar` `pie` `waterfall` 类目轴 | `labels`（`categories` 兼容）· `values[]` |
-| `panels[]` | 多面板：`panels` `multi_bar` `multi_subplot` `heatmap_panels` `scatter_panels` `scatter_matrix` `fit_comparison` `scatter_boundary` `nn_twin` `multi_panel_gd` | `kind`（`panels` 专用：`line`/`bar`/`scatter`/`area`）· `title` · `x`/`y` · `values`/`labels` · `series[]` · `data` · `x_min`/`x_max` · `func` |
+| `panels[]` | 多面板：`panels` `multi_bar` `multi_subplot` `heatmap_panels` `scatter_panels` `scatter_matrix` `fit_comparison` `scatter_boundary` `multi_panel_gd` | `kind`（`panels` 专用：`line`/`bar`/`scatter`/`area`）· `title` · `x`/`y` · `values`/`labels` · `series[]` · `data` · `x_min`/`x_max` · `func` |
 | `curves[]` | 函数/曲线：`multi_curve` `loglog` `kde` | `label` · `func`（表达式）或 `x`/`y` · `x_min`/`x_max` · `color` · `mean`/`std`/`weight`（kde） |
 | `items[]` | 行式数据：`waterfall`（`label`+`value`）· `forest`（`label`+`estimate`+`lo`+`hi`） | 见上 |
 | `bins[]` | `calibration` | `conf` · `acc` · `count`（也接受 `conf[]`/`acc[]`/`counts[]`） |
+| `lanes[]` · `steps[]` · `edges[]` | 泳道图：`swimlane` | `lanes[{id, label, color?}]` · `steps[{id, lane, label, col?, color?}]`（同列并行用 `col` 指定）· `edges[["a","b"]]` · `direction`（`LR` 泳道横排 / `TD` 竖排）· `step_width` / `row_height` |
+| `layers[]` · `layer_labels[]` | 神经网络结构：`nn_single`（神经元级，含跨层连线）· `nn_twin` 的 `left{}` / `right{}`（每个各带 `layers` / `layer_labels` / `title`） | `layers: [4, 6, 8, 6, 3]`（每层神经元数）· `layer_labels: ["输入层", "隐藏层 1", …]` |
+| `columns[]` · `head[]` | 大模型架构图：`arch_diagram` | `columns[{repeat, rail, input_label, embed, pe?, pe_label?, groups[{kind, label, norm?, residual?, cross_from?}]}]` · `head[]`（输出头逐层）· `head_label` · `bus_gap`（总线间距） |
 | `folded[]` / `stacks[]` | `flamegraph` | `"a;b;c 12"` 或嵌套 `{name, value, children[]}` |
 | `band{}` / `summary{}` | `fit_band`（`x`/`y`/`lo`/`hi`）· `forest`（`estimate`/`lo`/`hi`） | 见上 |
 | `points[]` | `roofline`（`intensity`/`flops`/`label`）· `scatter_boundary`（`[x, y, 组别]`） | 见上 |
