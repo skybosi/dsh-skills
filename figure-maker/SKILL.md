@@ -1,6 +1,6 @@
 ---
 name: figure-maker
-description: Use when the user wants to draw or update a figure — flowcharts, sequence/state/ER/class diagrams, system or model architecture diagrams (incl. Transformer/LLM block diagrams and neuron-level NN structures), swimlanes, or data/statistical/scientific charts (说「画张图」「画个流程图」「画个时序图」「画个架构图」「画个神经网络结构」「改成柱状图」「出一张热力图」「画个生存曲线」). 95 catalog entries (25 Mermaid entries covering 22 diagram types + 70 Matplotlib data types incl. research/bio), single-source soft palette, machine layout self-checks, byte-reproducible output, multi-format (svg/png/webp/pdf). Fully standalone — depends on nothing but this skill directory.
+description: Use when the user wants to draw or update a figure — flowcharts, sequence/state/ER/class diagrams, system or model architecture diagrams (incl. Transformer/LLM block diagrams and neuron-level NN structures), swimlanes, or data/statistical/scientific charts (说「画张图」「画个流程图」「画个时序图」「画个架构图」「画个神经网络结构」「改成柱状图」「出一张热力图」「画个生存曲线」). 97 catalog entries (28 Mermaid entries covering 22 diagram types + 69 Matplotlib data types incl. research/bio), single-source soft palette, machine layout self-checks, byte-reproducible output, multi-format (svg/png/webp/pdf). Fully standalone — depends on nothing but this skill directory.
 whenToUse: 用户要**画图/生成图表**时先加载本 skill：结构图（流程图、时序图、状态机、ER/类图、泳道图）、架构图（系统分层、Transformer/LLM 模块图、神经元级网络结构）、数据与统计图（柱状/折线/热力/散点/箱线/生存曲线/混淆矩阵/火焰图…）、论文插图（多面板组图、误差棒、均值±波动带）。触发说法如「画一张」「来张柱状图/热力图/流程图/时序图」「画个架构图」「把这个数据画出来」。仅生成 AI 生图提示词的需求请用 gen-image / article-cover-designer。
 ---
 
@@ -16,7 +16,7 @@ whenToUse: 用户要**画图/生成图表**时先加载本 skill：结构图（�
 
 ## 第一步永远是选型：先分类，再路由
 
-图型有 95 个条目（25 个 Mermaid 图族 + 70 种数据图），**不要靠记忆挑**，按下面三步走：
+图型有 97 个条目（28 个 Mermaid 图族 + 69 种数据图），**不要靠记忆挑**，按下面三步走：
 
 | 情况 | 动作 |
 |---|---|
@@ -47,8 +47,8 @@ python3 $S --example line_band                 # 该图型的真实骨架（取�
 
 | 类 | 数量 | 渲染器 | spec 里给什么 | 产物格式 |
 |---|---|---|---|---|
-| **A 类 · 结构/关系图** | 25 个 Mermaid 图族（覆盖 22 个 Mermaid 图型）（`type` 填 6 个入口名中任意一个） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
-| **B 类 · 数据/统计/科研图** | 70 种（含 `swimlane` 泳道图、`nn_single` 神经网络结构、`swimlane` 泳道图等） | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff（`jpg` / `tif` 也可） |
+| **A 类 · 结构/关系图** | 28 个 Mermaid 图族（覆盖 22 个 Mermaid 图型）（`type` 填 6 个入口名中任意一个） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
+| **B 类 · 数据/统计/科研图** | 69 种（含 `swimlane` 泳道图、`nn_single` 神经网络结构、`arch` 相关数据图等） | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff（`jpg` / `tif` 也可） |
 
 A 类不限于这 22 个图型 —— 凡 Mermaid v11 支持的图型都能画（`flowchart` `sequenceDiagram` `stateDiagram-v2`
 `classDiagram` `erDiagram` `architecture-beta` `C4Context` `gantt` `kanban` `journey` `requirementDiagram`
@@ -133,7 +133,7 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 - **B 类（Matplotlib）逐字节一致**：`save()` 里固定了 `svg.hashsalt` 并把 `metadata['Date']`
   置空 —— 否则 Matplotlib 会写入 `<dc:date>当前时间</dc:date>`、并给元素 id 加随机后缀
   （`id="m406f77eea2"`），同一 spec 每次的字节都不同，git diff / CI 全是噪音。
-- **A 类（Mermaid）多数逐字节一致，7 个图型例外**：实测连续两次重生成 98 张样例，
+- **A 类（Mermaid）多数逐字节一致，7 个图型例外**：实测连续两次重生成 97 张样例，
   **91 张字节相同**；`architecture-beta` `classDiagram` `erDiagram` `flowchart_c4` `gitGraph`
   `requirementDiagram` `stateDiagram-v2` 这几张的**个别贝塞尔控制点**会浮动
   （端点、元素 id、整体布局都不变，肉眼无差别），根因在 Mermaid 内部的曲线采样。
@@ -220,16 +220,16 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 | 改配色 | 改 `scripts/style.py` 的 `_PAPER_TINT`（或 `_shade` 的 `l_factor`）→ 两类图一起变；然后重生成样例与文档 |
 | 重生成样例 | ⚠️ 与代码改动**分开提交**：样例与运行环境绑定，本地重生成会让 90+ 张 SVG 的坐标整体微移（非功能变更，评审时跳过） |
 | 重生成文档 | `python3 scripts/build_docs.py`（写 `TYPES.md` + 刷新 `README.md` 画廊）。⚠️ 改过 `catalog.py`（分类/关键词/示例）后**必须重跑**，否则生成类文档会与代码漂移 |
-| 回归自测 | `python3 scripts/draw.py --batch specs/ --check`（98 个示例 spec 应全绿；`specs/templates/` 不在批量范围内） |
+| 回归自测 | `python3 scripts/draw.py --batch specs/ --check`（97 个示例 spec 应全绿；`specs/templates/` 不在批量范围内） |
 | 文档漂移自检 | `python3 scripts/draw.py --check-docs`（比对 TYPES.md / README.md 与 `catalog.py`，不一致退出码 1；`--doctor` 里也会报） |
 
 ## 当前状态
 
-- ✅ 95 个条目全部可用：25 个 Mermaid 图族（覆盖 22 个 Mermaid 图型）+ 70 种数据图（含科研/生医/3D/泳道图）
+- ✅ 97 个条目全部可用：28 个 Mermaid 图族（覆盖 22 个 Mermaid 图型）+ 69 种数据图（含科研/生医/3D/泳道图）
 - ✅ 选型层：`--recommend` / `--list <分类>` / `--catalog --json` / `--example`
 - ✅ `nn_single`（神经元级全连接，含跨层连线）
 - ✅ 配色单一来源（`_PAPER_TINT` → `SOFT_COLORS` / `FILL` / `ROLES`，A 类经 `--palette` 同源）；B 类输出**逐字节可复现**
-- ✅ 98 个示例 spec + 98 张样例图（`specs/` 与 `docs/examples/`），95 个条目**全部有样例**，`--batch --check` 全绿
+- ✅ 97 个示例 spec + 97 张样例图（`specs/` 与 `docs/examples/`），97 个条目**全部有样例**，`--batch --check` 全绿
 - ✅ A 类：标题不再裁切、退出码分级（渲染失败 vs 版式不过）、按图型分级阈值、软色板注入主题
 - ✅ B 类：`heatmap` 色阶按数据取值域、`twin_axis` 标签可配、`heatmap_panels` 面板标签生效、`bar` 兼容 `categories`
 - ✅ 泳道图 `swimlane`（原生绘制）· 聚类热图 `dendrogram: true`（行列层次聚类树）

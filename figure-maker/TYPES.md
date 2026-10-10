@@ -7,24 +7,24 @@
 
 | 类 | 数量 | 渲染器 | spec 里给什么 | 产物格式 |
 |---|---|---|---|---|
-| **A 类 · 结构/关系图** | 25 个 Mermaid 图族（6 个入口名等价） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
+| **A 类 · 结构/关系图** | 28 个 Mermaid 图族（6 个入口名等价） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
 | **B 类 · 数据/统计/科研图** | 69 种 | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff |
 
 ## 场景分类总览
 
 | 分类 id | 类 | 数量 | 什么时候用 |
 |---|---|---|---|
-| `flow` | A/B | 2 | 业务流程、算法流程、判定分支与回退 |
+| `flow` | A/B | 3 | 业务流程、算法流程、判定分支与回退 |
 | `interaction` | A | 1 | 接口调用顺序、消息交互、上下游协作 |
 | `state` | A | 1 | 订单/任务/连接的状态迁移 |
-| `model` | A | 3 | ER 关系图、类图、业务关系图 |
+| `model` | A | 4 | ER 关系图、类图、业务关系图 |
 | `arch` | A | 4 | 系统架构、分层、部署、C4 上下文 |
 | `plan` | A | 15 | 排期、看板、旅程、需求、里程碑、分支流 |
 | `compare` | B | 9 | 类目之间比大小、构成占比、增量分解 |
 | `trend` | B | 13 | 随自变量变化、多 run 均值±波动、指标曲线 |
 | `dist` | B | 9 | 分布形态、分位数、经验分布、离散概率 |
 | `relate` | B | 11 | 两变量关系、拟合、残差、相关性矩阵 |
-| `field` | B | 12 | 热力图、混淆矩阵、张量、网络结构、等高线、3D 曲面 |
+| `field` | B | 13 | 热力图、混淆矩阵、张量、网络结构、等高线、3D 曲面 |
 | `eval` | B | 4 | 模型质量与工程性能（ROC/校准/火焰图） |
 | `math` | B | 7 | 梯度下降、切线/极限、向量与微分示意 |
 | `bio` | B | 3 | 生存曲线、森林图、火山图、组学热图 |
@@ -39,6 +39,7 @@ A 类的 6 个入口名（`flow` `graph` `tree` `nn_diagram` `ladder` `timeline`
 | Mermaid 图族 | spec 的 type | 场景 | 关键词 |
 |---|---|---|---|
 | `flowchart` | `flow` | 业务流程 / 算法流程 / 判定与回退（最通用） | 流程 · 流程图 · 判定 · 分支 · 算法 · 步骤 · swimlane |
+| `flowchart` | `flow` | 优先级 / 依赖阶梯（自上而下逐级递减） | 优先级 · 阶梯 · 依赖顺序 · 运算符 · 逐级递减 |
 
 ### 交互与时序（interaction）
 
@@ -59,6 +60,7 @@ A 类的 6 个入口名（`flow` `graph` `tree` `nn_diagram` `ladder` `timeline`
 | `flowchart` | `graph` | 关系网络 / 拓扑（无方向的连接关系） | 关系图 · 网络图 · 拓扑图 · 依赖图 · 关系网络 |
 | `erDiagram` | `flow` | ER 图 / 数据模型 / 业务实体关系（含主外键与基数） | ER · ER图 · 数据模型 · 表关系 · 实体 · 业务关系 · 基数 |
 | `classDiagram` | `flow` | 类图 / 领域模型（属性、方法、多重度、依赖） | 类图 · 领域模型 · 对象 · 类 · 继承 · 多重度 |
+| `flowchart` | `flow` | 分类体系 / 层级树（taxonomy：逐级细分） | 分类体系 · 层级树 · taxonomy · 树形图 · 细分 |
 
 ### 架构与上下文（arch）
 
@@ -88,6 +90,12 @@ A 类的 6 个入口名（`flow` `graph` `tree` `nn_diagram` `ladder` `timeline`
 | `sankey-beta` | `flow` | 流量/去向归因（桑基图） | 桑基 · 流量 · 归因 · sankey |
 | `treemap-beta` | `flow` | 树图 / 面积占比（层级构成） | 树图 · treemap · 面积 |
 | `radar-beta` | `flow` | 雷达图（Mermaid 版，多指标对比） | 雷达 · 多指标 · radar |
+
+### 场与矩阵（field）
+
+| Mermaid 图族 | spec 的 type | 场景 | 关键词 |
+|---|---|---|---|
+| `flowchart` | `flow` | 神经网络结构示意（Mermaid 版：输入-隐藏-输出逐层堆叠） | 神经网络结构 · 网络结构图 · MLP · 全连接网络 · 层级堆叠 |
 
 ## B 类 · 数据图（69 种）
 
@@ -520,6 +528,30 @@ radar-beta
   axis a["错误率"], b["延迟"], c["吞吐"]
   curve s1["改造前"]{80, 70, 60}
   curve s2["改造后"]{40, 35, 90}
+```
+
+**flowchart** —— 优先级 / 依赖阶梯（自上而下逐级递减）（spec 的 `type` 填 `flow`）
+
+```mermaid
+flowchart TD
+  A["① 括号"] --> B["② 乘除"] --> C["③ 加减"] --> D["④ 比较与逻辑"]
+```
+
+**flowchart** —— 神经网络结构示意（Mermaid 版：输入-隐藏-输出逐层堆叠）（spec 的 `type` 填 `flow`）
+
+```mermaid
+flowchart TD
+  I[输入层] --> H1[隐藏层 1] --> H2[隐藏层 2] --> O[输出层]
+```
+
+**flowchart** —— 分类体系 / 层级树（taxonomy：逐级细分）（spec 的 `type` 填 `flow`）
+
+```mermaid
+flowchart TD
+  R[总类] --> A[按维度一]
+  R --> B[按维度二]
+  A --> A1[子类 A1]
+  B --> B1[子类 B1]
 ```
 
 ## 替代写法 / 已知边界（都能出图，但换写法更稳）

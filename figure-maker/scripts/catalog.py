@@ -126,6 +126,17 @@ A_FAMILIES = [
     ("flow", "radar-beta", "plan", "雷达图（Mermaid 版，多指标对比）",
      ["雷达", "多指标", "radar"],
      "radar-beta\n  title 健康度\n  axis a[\"错误率\"], b[\"延迟\"], c[\"吞吐\"]\n  curve s1[\"改造前\"]{80, 70, 60}\n  curve s2[\"改造后\"]{40, 35, 90}"),
+
+    # —— 以下 3 个图族此前**有 spec 与样例、却没登记进目录**（用户/模型发现不了），本次补登 ——
+    ("flow", "flowchart", "flow", "优先级 / 依赖阶梯（自上而下逐级递减）",
+     ["优先级", "阶梯", "依赖顺序", "运算符", "逐级递减"],
+     "flowchart TD\n  A[\"① 括号\"] --> B[\"② 乘除\"] --> C[\"③ 加减\"] --> D[\"④ 比较与逻辑\"]"),
+    ("flow", "flowchart", "field", "神经网络结构示意（Mermaid 版：输入-隐藏-输出逐层堆叠）",
+     ["神经网络结构", "网络结构图", "MLP", "全连接网络", "层级堆叠"],
+     "flowchart TD\n  I[输入层] --> H1[隐藏层 1] --> H2[隐藏层 2] --> O[输出层]"),
+    ("flow", "flowchart", "model", "分类体系 / 层级树（taxonomy：逐级细分）",
+     ["分类体系", "层级树", "taxonomy", "树形图", "细分"],
+     "flowchart TD\n  R[总类] --> A[按维度一]\n  R --> B[按维度二]\n  A --> A1[子类 A1]\n  B --> B1[子类 B1]"),
 ]
 # A 类每个图族的样例 basename —— 与 A_FAMILIES 一一对应。
 # 为什么不能按 type 命名样例：25 个 A 类条目只共用 3 个 spec type（flow/graph/timeline），
@@ -157,6 +168,9 @@ A_EXAMPLE_KEYS = [
     "sankey-beta",
     "treemap-beta",
     "radar-beta",
+    "ladder",                # 优先级 / 依赖阶梯
+    "nn_diagram",            # 神经网络结构（Mermaid）
+    "tree",                  # 分类体系 / 层级树
 ]
 assert len(A_EXAMPLE_KEYS) == len(A_FAMILIES), 'A_EXAMPLE_KEYS 必须与 A_FAMILIES 等长'
 

@@ -136,7 +136,21 @@ def gallery_md():
     L.append('- **选型不靠记清单**：`--recommend "一句话描述"` 直接给候选图型 + 可跑骨架；`--list` 按 14 个场景分类列全部图型')
     L.append('')
     n_img = sum(1 for e in ents if _exists(REL_EX % (e.get('example_key') or e['type'])))
-    L.append('## 全部条目（%d 个；其中 %d 张带样例图）' % (len(ents), n_img))
+    L.append('## 全部条目（%d 个图型条目 · 图库 %d 张）' % (len(ents), n_img))
+    L.append('')
+    L.append('> 编号即下表顺序；点图型名跳到图库里的那张样例。')
+    L.append('')
+    # 场景分类总览：先给「有哪些类、每类多少图」，再给全量表 —— 分类清晰优先
+    L.append('### 场景分类总览')
+    L.append('')
+    L.append('| 分类 id | 场景 | 覆盖类 | 条目数 |')
+    L.append('|---|---|---|---|')
+    for cid, klass, name, when, _kw in catalog.CATEGORIES:
+        items = [e for e in ents if e['category'] == cid]
+        if not items:
+            continue
+        L.append('| `%s` | %s | %s | %d |' % (cid, name, klass, len(items)))
+    L.append('')
     L.append('')
     L.append('> 样例由同名 spec 原样生成：`python3 scripts/build_examples.py --only <图型>`')
     L.append('')
@@ -149,19 +163,7 @@ def gallery_md():
             label = e['mermaid'] if e['kind'] == 'A' else e['type']
             L.append('| %d | %s | %s | [`%s`](#%s) | %s |' % (i, e['kind'], name, label, label.lower(), e['scene'][:46]))
     L.append('')
-    a_ex = [e['example_key'] for e in a_ents
-            if e.get('example_key') and _exists(REL_EX % e['example_key'])]
-    if a_ex:
-        L.append('### A 类样例图（%d 张，来自 specs/a__*.json）' % len(a_ex))
-        L.append('')
-        for t in a_ex:
-            L.append('<a id="a-%s"></a>' % t)
-            L.append('**`%s`**' % t)
-            L.append('')
-            L.append('![%s](%s)' % (t, REL_EX % t))
-            L.append('')
-            L.append('<sub>spec：<code>specs/a__%s.json</code></sub>' % t)
-            L.append('')
+    # 所有条目（A 与 B）都只在自己的场景分类里出现一次，避免 A 类重复两遍
     for cid, klass, name, when, _kw in catalog.CATEGORIES:
         items = [e for e in ents if e['category'] == cid]
         if not items:
@@ -173,17 +175,17 @@ def gallery_md():
             L.append('<a id="%s"></a>' % label.lower())
             L.append('**`%s`** —— %s' % (label, e['scene']))
             L.append('')
-            svg = REL_EX % (e.get('example_key') or e['type'])
-            if e['kind'] == 'B' and _exists(svg):
+            _k = e.get('example_key') or e['type']
+            svg = REL_EX % _k
+            if _exists(svg):                      # A 与 B 都在这里出图（不再另设 A 类专块）
                 L.append('![%s](%s)' % (label, svg))
                 L.append('')
             if e['kind'] == 'B':
-                L.append('<sub>spec：<code>%s</code> ｜ 参数键：%s</sub>' % (_spec_path(e) or '—', ' · '.join(e['params']) or '—'))
+                L.append('<sub>B 类 ｜ spec：<code>%s</code> ｜ 参数键：%s</sub>'
+                         % (_spec_path(e) or '—', ' · '.join(e['params']) or '—'))
             else:
-                _k = e.get('example_key') or e['type']
-                extra = ('样例图：[`%s`](#a-%s) ｜ ' % (REL_EX % _k, _k)) if _exists(REL_EX % _k) else ''
-                L.append('<sub>A 类：`mmd` 里写 `%s`，spec 的 `type` 填 `%s`（骨架见 [TYPES.md](TYPES.md)） ｜ %s</sub>'
-                         % (e['mermaid'], e['type'], extra.rstrip(' ｜ ')))
+                L.append('<sub>A 类 ｜ `mmd` 里写 `%s`，spec 的 `type` 填 `%s` ｜ spec：<code>specs/a__%s.json</code>'
+                         '（骨架见 [TYPES.md](TYPES.md)）</sub>' % (e['mermaid'], e['type'], _k))
             L.append('')
     L.append('<!-- GALLERY:END -->')
     return '\n'.join(L)
