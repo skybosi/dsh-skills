@@ -8,7 +8,7 @@
 | 类 | 数量 | 渲染器 | spec 里给什么 | 产物格式 |
 |---|---|---|---|---|
 | **A 类 · 结构/关系图** | 25 个 Mermaid 图族（6 个入口名等价） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
-| **B 类 · 数据/统计/科研图** | 70 种 | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff |
+| **B 类 · 数据/统计/科研图** | 69 种 | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff |
 
 ## 场景分类总览
 
@@ -18,7 +18,7 @@
 | `interaction` | A | 1 | 接口调用顺序、消息交互、上下游协作 |
 | `state` | A | 1 | 订单/任务/连接的状态迁移 |
 | `model` | A | 3 | ER 关系图、类图、业务关系图 |
-| `arch` | A | 5 | 系统架构、分层、部署、C4 上下文 |
+| `arch` | A | 4 | 系统架构、分层、部署、C4 上下文 |
 | `plan` | A | 15 | 排期、看板、旅程、需求、里程碑、分支流 |
 | `compare` | B | 9 | 类目之间比大小、构成占比、增量分解 |
 | `trend` | B | 13 | 随自变量变化、多 run 均值±波动、指标曲线 |
@@ -89,7 +89,7 @@ A 类的 6 个入口名（`flow` `graph` `tree` `nn_diagram` `ladder` `timeline`
 | `treemap-beta` | `flow` | 树图 / 面积占比（层级构成） | 树图 · treemap · 面积 |
 | `radar-beta` | `flow` | 雷达图（Mermaid 版，多指标对比） | 雷达 · 多指标 · radar |
 
-## B 类 · 数据图（70 种）
+## B 类 · 数据图（69 种）
 
 `参数键` 一列由 `drawers.py` 源码自动抽取（`p.get("…")`），不会和实现漂移；
 嵌套结构（`panels[]` `series[]` `groups[]` `curves[]` 等）见 [docs/SPEC-REFERENCE.md](docs/SPEC-REFERENCE.md)。
@@ -99,12 +99,6 @@ A 类的 6 个入口名（`flow` `graph` `tree` `nn_diagram` `ladder` `timeline`
 | 图型 | 场景 | 关键词 | 参数键 | 样例 |
 |---|---|---|---|---|
 | `swimlane` | 泳道图 / 跨职能流程图（原生绘制，最可控） | 泳道图 · 跨职能 · swimlane · 泳道 · 责任分工 | `direction` · `edges` · `lanes` · `row_height` · `step_width` · `steps` | [spec](specs/b__swimlane.json) · [SVG](docs/examples/swimlane.svg) |
-
-### 架构与上下文（arch）—— 系统架构、分层、部署、C4 上下文
-
-| 图型 | 场景 | 关键词 | 参数键 | 样例 |
-|---|---|---|---|---|
-| `block_diagram` | 通用块图 / 分层架构图（网格块 + 正交连线 + 侧边通道 + 分组框：模型架构、系统分层、数据管道都能画） | 架构图 · 块图 · 模块图 · 系统架构 · 分层架构 · 模型架构 · 大模型架构图 · 网络结构图 · Transformer · BERT · GPT · 编码器 · 解码器 · 数据管道 · 流程图 | — | [spec](specs/b__block_diagram.json) · [SVG](docs/examples/block_diagram.svg) |
 
 ### 对比与构成（compare）—— 类目之间比大小、构成占比、增量分解
 

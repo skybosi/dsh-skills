@@ -216,6 +216,26 @@ def _bbox_of(t, renderer):
         return None
 
 
+def missing_glyphs(text, prop=None):
+    """返回字符串里**渲染时没有字形**的字符 —— 这些字符会画成"豆腐块"（□）。
+
+    ⚠️ 必须用**文本对象自己的 FontProperties** 来判定：字体是按字符回退的，
+    自己另挑一个字体（findfont(第一个家族)）会得出完全相反的结论 ——
+    实测这样会把中文全判成缺字形、又漏掉真的缺字形的 ∿。
+    真实踩过：PingFang SC 里 U+223F 码位存在但指向 notdef，画出来就是方框。
+    """
+    from matplotlib import font_manager as _fm
+    from matplotlib.ft2font import FT2Font
+    if prop is None:
+        prop = _fm.FontProperties(family=plt.rcParams.get("font.sans-serif") or "sans-serif")
+    try:
+        path = _fm.findfont(prop)          # 与渲染同一条解析路径
+        cmap = FT2Font(path).get_charmap()
+    except Exception:                      # 解析不出来就不下结论，避免误报
+        return []
+    return sorted({ch for ch in str(text) if ch not in "\n\t " and not cmap.get(ord(ch), 0)})
+
+
 def check_layout(fig, overlap_ratio=0.12, min_px=2.5):
     """机器版布局检查（B 类）：文字重叠、文字越出画布。全部在**像素空间**里算。
 
@@ -246,12 +266,19 @@ def check_layout(fig, overlap_ratio=0.12, min_px=2.5):
                 if not lb.get_visible() or not (lo <= tick.get_loc() <= hi):
                     clipped.add(id(lb))          # 次刻度/轴外刻度：渲染时被裁剪，不算越界
 
+    # 缺字形的字符画出来是「豆腐块」，肉眼极易漏看（实测 PingFang SC 对 U+223F 就是如此）
+    glyph_bad = {}
+
     texts = []
     seen = set()
     for t in fig.findobj(Text):
         if not t.get_visible() or id(t) in clipped:
             continue
         s = (t.get_text() or "").strip()
+        if s:
+            _miss = missing_glyphs(s, t.get_fontproperties())
+            if _miss:
+                glyph_bad[s[:26]] = _miss
         if not s:
             continue
         try:
@@ -293,7 +320,8 @@ def check_layout(fig, overlap_ratio=0.12, min_px=2.5):
             out.append({"t": it["t"], "box_px": {k: round(it[k], 1) for k in ("x", "y", "w", "h")}})
 
     return {"canvas_px": [W, H], "texts": len(texts), "overlap": overlap,
-            "outOfCanvas": out, "degenerateTexts": degenerate}
+            "outOfCanvas": out, "degenerateTexts": degenerate,
+              "missingGlyphs": glyph_bad}
 
 
 def report_and_exit(checks, out_path):

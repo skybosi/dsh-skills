@@ -2464,15 +2464,3 @@ def draw_nn_single(p, out_path, width_in=8.0, height_in=7.6):
 
 
 DRAWERS.update({"nn_single": draw_nn_single})   # 注册放在最后，与 swimlane 同规矩
-
-def draw_block_diagram(p, out_path, width_in=8.0, height_in=None):
-    """通用「块图 / 分层架构图」（网格块 + 正交连线 + 侧通道 + 分组框）。
-
-    布局引擎在 `scripts/blockdiagram.py`：本函数只做接线（注入 _finish 与文字度量，
-    避免 drawers ↔ blockdiagram 循环导入）。图型没有任何模型/领域专属概念。
-    """
-    from blockdiagram import render_block_diagram
-    return render_block_diagram(p, out_path, width_in, finish=_finish, text_px=_text_px)
-
-
-DRAWERS.update({"block_diagram": draw_block_diagram})

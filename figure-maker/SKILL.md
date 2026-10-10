@@ -24,7 +24,7 @@ whenToUse: 用户要**画图/生成图表**时先加载本 skill：结构图（�
 | 用户**只给描述**（"把这段流程画出来""多组实验的波动"） | `--recommend "<描述>"` → 取第 1 个候选；第 2、3 个作为备选 |
 | 描述跨了好几个场景 / 你拿不准 | `--list`（14 个分类）扫一眼，再 `--recommend` 收窄 |
 | 需要程序化选型 | `--catalog --json`（含分类、关键词、参数键、示例 spec 路径） |
-| 要写**技术方案文档**（复杂业务流程 / 分层架构 / 跨系统职责 / 模型架构） | `--example tech-flow` · `tech-arch` · `tech-swimlane` · `two_tower` · `service_layers` —— `specs/templates/` 里的**完整真实方案图**，直接抄改 |
+| 要写**技术方案文档**（复杂业务流程 / 分层架构 / 跨系统职责 / 模型架构） | `--example tech-flow` · `tech-arch` · `tech-swimlane` —— `specs/templates/` 里的**完整真实方案图**，直接抄改 |
 
 ```bash
 S=<本 skill 目录>/scripts/draw.py
@@ -48,7 +48,7 @@ python3 $S --example line_band                 # 该图型的真实骨架（取�
 | 类 | 数量 | 渲染器 | spec 里给什么 | 产物格式 |
 |---|---|---|---|---|
 | **A 类 · 结构/关系图** | 25 个 Mermaid 图族（覆盖 22 个 Mermaid 图型）（`type` 填 6 个入口名中任意一个） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
-| **B 类 · 数据/统计/科研图** | 70 种（含 `swimlane` 泳道图、`nn_single` 神经网络结构、`block_diagram` 通用块图 / 架构图） | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff（`jpg` / `tif` 也可） |
+| **B 类 · 数据/统计/科研图** | 70 种（含 `swimlane` 泳道图、`nn_single` 神经网络结构、`swimlane` 泳道图等） | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff（`jpg` / `tif` 也可） |
 
 A 类不限于这 22 个图型 —— 凡 Mermaid v11 支持的图型都能画（`flowchart` `sequenceDiagram` `stateDiagram-v2`
 `classDiagram` `erDiagram` `architecture-beta` `C4Context` `gantt` `kanban` `journey` `requirementDiagram`
@@ -220,7 +220,7 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 
 - ✅ 95 个条目全部可用：25 个 Mermaid 图族（覆盖 22 个 Mermaid 图型）+ 70 种数据图（含科研/生医/3D/泳道图）
 - ✅ 选型层：`--recommend` / `--list <分类>` / `--catalog --json` / `--example`
-- ✅ `nn_single`（神经元级全连接，含跨层连线）· `block_diagram`：**通用块图 / 分层架构图**引擎（网格块 + 正交连线 + 侧边通道 + 分组框），Transformer 架构图、双塔检索、系统分层都是它的 spec，**引擎内没有任何模型专属代码**
+- ✅ `nn_single`（神经元级全连接，含跨层连线）
 - ✅ 配色单一来源（`_PAPER_TINT` → `SOFT_COLORS` / `FILL` / `ROLES`，A 类经 `--palette` 同源）；B 类输出**逐字节可复现**
 - ✅ 98 个示例 spec + 98 张样例图（`specs/` 与 `docs/examples/`），95 个条目**全部有样例**，`--batch --check` 全绿
 - ✅ A 类：标题不再裁切、退出码分级（渲染失败 vs 版式不过）、按图型分级阈值、软色板注入主题

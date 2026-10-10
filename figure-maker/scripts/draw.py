@@ -186,6 +186,10 @@ def _layout_summary(checks):
     gap_ok = (gap_min is None) or (gap is None) or (gap >= gap_min)
     n_overlap = cnt('overlap', 'overlapText')
     fitted = checks.get('canvasFitted')
+    bad_glyph = checks.get('missingGlyphs') or {}
+    if bad_glyph:
+        print('⚠️  字形缺失（会画成豆腐块，换字体里有的字符）：%s'
+              % '；'.join('%s → %s' % (k, ''.join(v)) for k, v in list(bad_glyph.items())[:3]))
     n_out = 0 if fitted else cnt('outOfCanvas')       # 自动扩画布后，越界内容已可见 → 不算红线
     out = {
         'overlap': n_overlap,

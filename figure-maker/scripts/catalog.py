@@ -210,7 +210,6 @@ B_TYPES = {
     "clustered_heatmap": ("field", "表达矩阵热图（行列 z-score + 层次聚类重排，不画树）", ["聚类热图", "表达矩阵", "组学", "z-score", "热图重排"], "b__clustered_heatmap.json"),
     "nn_twin": ("field", "神经网络结构示意（单层 vs 多层）", ["网络结构", "MLP", "全连接", "神经元", "网络示意图"], "b__nn_twin.json"),
     "nn_single": ("field", "单个神经网络结构（神经元级全连接图，不做左右对比）", ["神经网络", "神经元", "全连接网络", "MLP", "网络结构图"], "b__nn_single.json"),
-    "block_diagram": ("arch", "通用块图 / 分层架构图（网格块 + 正交连线 + 侧边通道 + 分组框：模型架构、系统分层、数据管道都能画）", ["架构图", "块图", "模块图", "系统架构", "分层架构", "模型架构", "大模型架构图", "网络结构图", "Transformer", "BERT", "GPT", "编码器", "解码器", "数据管道", "流程图"], "b__block_diagram.json"),
     "tensor_blocks": ("field", "0~3 维张量示意", ["张量", "维度", "tensor"], "b__tensor_blocks.json"),
     "tensor_cube_panels": ("field", "三维张量 + 通道混合/独立做法对比", ["张量示意", "通道混合"], "b__tensor_cube_panels.json"),
     "matrix_mul_panels": ("field", "矩阵乘 vs 逐元素乘示意", ["矩阵乘", "逐元素", "broadcast"], "b__matrix_mul_panels.json"),
