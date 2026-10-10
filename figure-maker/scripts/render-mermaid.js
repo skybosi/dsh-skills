@@ -186,6 +186,10 @@ const LAYOUT_TIPS = {
   journey: 'journey 的分段标题可能超出画布（已自动扩画布兜底）；段数过多时建议拆成两张',
   'radar-beta': 'radar-beta 的轴标签可能超出画布（已自动扩画布兜底）；指标过多时建议减少维度',
   'treemap-beta': 'treemap-beta 的叶子标签容易重叠：减少层级或改用 bar/pie 表达占比',
+  'stateDiagram-v2': 'note 会作为独立 cluster 参与 dagre 布局：`note left/right of X` **都不保证落位**（实测 right of 也可能落在左侧），'
+    + '并会用一条虚线折线连回原状态。想更紧凑：把 note 挂到链路末端的状态、缩短 note 文本，或改用转移标签（`A --> B: 说明`）',
+  gantt: 'gantt 的 "today" 线画在"今天"：当样例日期与今天相差很远时它会落到坐标轴之外，'
+    + '把日期设在当前时间附近可避免（渲染器已对这类离群元素做了过滤，不会再把画布撑大）',
 };
 
 /** 扫 mmd 里几类「一定会在图上变成乱码/噪音」的写法，提前给提示（不是错误，不阻断渲染） */
@@ -326,6 +330,7 @@ async function renderMermaid(mmd, opts = {}) {
       const vb = svgEl.viewBox.baseVal;
       const vbX = vb.x, vbY = vb.y, W = vb.width, H = vb.height;
       let canvasX = vbX, canvasY = vbY, canvasW = W, canvasH = H;
+      let tw = 0;                              // 标题宽度：供后面「按可见内容居中」复用
       if (title) {
         const titleH = 34;
         await document.fonts.ready;
@@ -339,7 +344,7 @@ async function renderMermaid(mmd, opts = {}) {
         t.setAttribute('id', 'fig-title');   // ⚠️ 必须给 id：htmlLabels=false 时节点标签也是 <text>
         t.textContent = title;
         svgEl.appendChild(t);
-        const tw = (t.getComputedTextLength ? t.getComputedTextLength() : t.getBBox().width) || 0;
+        tw = (t.getComputedTextLength ? t.getComputedTextLength() : t.getBBox().width) || 0;
         const margin = 24;
         canvasW = Math.max(W, Math.ceil(tw + margin * 2));
         const dx = Math.round((canvasW - W) / 2);
@@ -355,6 +360,80 @@ async function renderMermaid(mmd, opts = {}) {
       svgEl.setAttribute('viewBox', `${canvasX} ${canvasY} ${canvasW} ${canvasH}`);
       svgEl.setAttribute('width', canvasW);
       svgEl.setAttribute('height', canvasH);
+
+      // ---- 画布按**可见内容**重新居中 -------------------------------------------
+      //  ⚠️ 不能直接信 Mermaid 的 viewBox：它的留白左右不对称（实测 stateDiagram-v2 左 42 / 右 7.5
+      //     用户单位；ladder 曾出现左 20 / 右 231）——照着它居中，肉眼就是"内容偏一边"。
+      //  这里量一次真实可见内容外框（屏幕坐标 → 用户单位），按内容居中重建画布：
+      //  **只改 viewBox/宽高与标题位置，不动内容几何**，所以 diff 很小，也不影响负原点图型。
+      {
+        const r0 = svgEl.getBoundingClientRect();
+        const scale = canvasW / Math.max(1, r0.width);
+        // 离群过滤：以 **Mermaid 的 viewBox** 为参照（不是当前画布，避免自反馈）——
+        // 完全落在「viewBox 外扩 50%」之外的单个元素不参与画布计算。实测 gantt 会把 "today"
+        // 线画到 x≈57866（样例日期在 2026-01，而"今天"是 2026-10，超出轴范围），
+        // 不过滤就会生成一张 57890px 宽的图。真正只轻微越界的图型（journey/radar/treemap）
+        // 仍在这个范围内，照旧会被纳入。
+        const limL = vbX - W * 0.5, limR = vbX + W * 1.5;
+        const limT = vbY - H * 0.5, limB = vbY + H * 1.5;
+        let cx0 = Infinity, cy0 = Infinity, cx1 = -Infinity, cy1 = -Infinity, seen = 0;
+        // ⚠️ 遍历**所有**元素再按「是否真的绘制」过滤：以前用标签白名单，漏了 `<use>`
+        //    （gitGraph 的虚线边框就是 <use> 引用的），导致那一侧被算漏、内容贴边。
+        svgEl.querySelectorAll('*')
+          .forEach((el) => {
+            const t0 = el.tagName.toLowerCase();
+            if (el.id === 'fig-background' || el.id === 'fig-title') return;
+            if (['style', 'defs', 'title', 'desc', 'metadata', 'marker', 'clippath', 'lineargradient',
+                 'radialgradient', 'stop', 'filter', 'pattern', 'mask', 'symbol'].includes(t0)) return;
+            if (el.closest('defs') || el.closest('marker') || el.closest('clipPath')) return;
+            // 容器（<g>/<svg>）不单独量：它们的盒子会把内部**不可见的占位元素**一起算进来
+            // （实测 stateDiagram-v2 的 note-cluster 就这样把画布撑宽 35px）。子元素会各自被量到。
+            if (['g', 'svg', 'a', 'switch', 'symbol'].includes(t0)) return;
+            const cs = getComputedStyle(el);
+            if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return;
+            // 只统计**真的会绘制**的元素：Mermaid 会给边标签留 `fill:none;stroke:none` 的空矩形
+            // （实测 stateDiagram-v2 里有一块 8..228 的空 rect），把它算进外框就会让画布凭空变宽、
+            // 内容看着偏一边。文字/图片类不看 fill/stroke。
+            const tag = el.tagName.toLowerCase();
+            const paints = (tag === 'text' || tag === 'image' || tag === 'foreignobject')
+              || cs.fill !== 'none' || cs.stroke !== 'none';
+            if (!paints) return;
+            if (parseFloat(cs.fillOpacity) === 0 && parseFloat(cs.strokeOpacity) === 0) return;
+            const b = el.getBoundingClientRect();
+            // 按描边宽度补偿：`<line>` 这种水平/垂直线段的 bbox 厚度是 0，直接按零尺寸丢掉会把
+            // 它整条漏掉（实测 gitGraph 的虚线边框就是这么丢的，导致内容贴右边缘）。
+            const sw = parseFloat(cs.strokeWidth) || 0;
+            const pad = (tag === 'text' || tag === 'image' || tag === 'foreignobject') ? 0 : Math.max(0, sw / 2) + 0.5;
+            // 只丢「点对象」（两个维度都≈0）：Mermaid 会留 0×0 的空 tspan / 占位 rect（实测
+            // stateDiagram-v2 里就有，会把画布往左撑 40+px）。而水平/垂直线段只有一个维度为 0，必须保留。
+            if (b.width <= 0.5 && b.height <= 0.5) return;
+            const uL = canvasX + (b.left - r0.left) * scale - pad;
+            const uR = canvasX + (b.right - r0.left) * scale + pad;
+            const uT = canvasY + (b.top - r0.top) * scale - pad;
+            const uB = canvasY + (b.bottom - r0.top) * scale + pad;
+            if (uR < limL || uL > limR || uB < limT || uT > limB) return;   // 离群元素
+            cx0 = Math.min(cx0, uL); cx1 = Math.max(cx1, uR);
+            cy0 = Math.min(cy0, uT); cy1 = Math.max(cy1, uB);
+            seen++;
+          });
+        if (seen > 0 && cx1 > cx0 && cy1 > cy0) {
+          const M = 10, titleH = title ? 34 : 0;
+          const contentW = cx1 - cx0, contentH = cy1 - cy0;
+          const newW = Math.ceil(Math.max(contentW, tw || 0) + M * 2);
+          const newH = Math.ceil(contentH + titleH + M * 2);
+          canvasX = cx0 - (newW - contentW) / 2;                       // 内容水平居中
+          canvasY = cy0 - titleH - M;                                  // 标题占一行 + 上边距
+          canvasW = newW; canvasH = newH;
+          svgEl.setAttribute('viewBox', `${canvasX} ${canvasY} ${canvasW} ${canvasH}`);
+          svgEl.setAttribute('width', canvasW);
+          svgEl.setAttribute('height', canvasH);
+          const tEl = svgEl.querySelector('#fig-title');
+          if (tEl) {
+            tEl.setAttribute('x', String(Math.round(canvasX + canvasW / 2)));
+            tEl.setAttribute('y', String(Math.round(canvasY + titleH / 2 + 6)));
+          }
+        }
+      }
       // 规范要求「背景纯白」：显式插一块白底（id 不是 class，不会被上面那套清理规则命中），
       // 这样图在深色主题站点里也正常。spec 里给 "background": false 可关闭（透明背景）。
       if (bg) {
