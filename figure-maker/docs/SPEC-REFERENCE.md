@@ -71,7 +71,7 @@
 | `bins[]` | `calibration` | `conf` · `acc` · `count`（也接受 `conf[]`/`acc[]`/`counts[]`） |
 | `lanes[]` · `steps[]` · `edges[]` | 泳道图：`swimlane` | `lanes[{id, label, color?}]` · `steps[{id, lane, label, col?, color?}]`（同列并行用 `col` 指定）· `edges[["a","b"]]` · `direction`（`LR` 泳道横排 / `TD` 竖排）· `step_width` / `row_height` |
 | `layers[]` · `layer_labels[]` | 神经网络结构：`nn_single`（神经元级，含跨层连线）· `nn_twin` 的 `left{}` / `right{}`（每个各带 `layers` / `layer_labels` / `title`） | `layers: [4, 6, 8, 6, 3]`（每层神经元数）· `layer_labels: ["输入层", "隐藏层 1", …]` |
-| `columns[]` · `head[]` | 大模型架构图：`arch_diagram` | `columns[{repeat, rail, input_label, embed, pe?, pe_label?, groups[{kind, label, norm?, residual?, cross_from?}]}]` · `head[]`（输出头逐层）· `head_label` · `bus_gap`（总线间距） |
+| `blocks[]` · `edges[]` · `rails[]` · `frames[]` | 通用块图 / 分层架构图：`block_diagram`（模型架构、系统分层、数据管道同用一套） | `blocks[{id, row, col, span?, dx?, label, shape?, role?, h?, size?, label_side?}]` · `edges[{from, to, label?, arrows?, style?, from_side?, to_side?, spread?}]` · `rails[{side, left/right, from?, to, offset?}]`（跳连 / 残差这类绕行通道）· `frames[{col, rows, label?, label_side?}]`（分组框 + 侧标签，如 N×） |
 | `folded[]` / `stacks[]` | `flamegraph` | `"a;b;c 12"` 或嵌套 `{name, value, children[]}` |
 | `band{}` / `summary{}` | `fit_band`（`x`/`y`/`lo`/`hi`）· `forest`（`estimate`/`lo`/`hi`） | 见上 |
 | `points[]` | `roofline`（`intensity`/`flops`/`label`）· `scatter_boundary`（`[x, y, 组别]`） | 见上 |
@@ -96,6 +96,8 @@
 | `tech-flow` | 订单履约主流程：6 个子域、20+ 节点、异常与补偿闭环（`flowchart TD` + `classDef` 语义分类） | `python3 scripts/draw.py --example tech-flow > spec.json` |
 | `tech-arch` | 订单中台技术架构：客户端 / 接入 / 应用服务 / 中间件 / 存储 / 外部依赖 六层，含跨层数据流与异步链路 | `--example tech-arch` |
 | `tech-swimlane` | 订单履约跨系统职责：用户 / 订单 / 库存 / 支付 / 履约 5 泳道、12 步（B 类 `swimlane`） | `--example tech-swimlane` |
+| `two_tower` | 双塔检索模型：两列并行编码 → 跨列汇总（`block_diagram` 的 `span` 跨列块） | `--example two_tower` |
+| `service_layers` | 订单系统分层架构：同步链路 + 异步链路 + 跨列调用 | `--example service_layers` |
 
 > 模板是**普通 spec**，`--batch specs/` 不会扫到它们（在子目录里），样例画廊也仍是 98 张；
 > 出图：`python3 scripts/draw.py spec.json --check`。⚠️ TD 方向的复杂流程图会很高（3000+ px），

@@ -79,7 +79,7 @@ python3 $S --batch specs/                          # 批量出图（仓库自带
 | 9 | A | 架构与上下文 | [`C4Context`](#c4context) | C4 上下文/容器图（人-系统-外部系统关系） |
 | 10 | A | 架构与上下文 | [`flowchart`](#flowchart) | C4 风格架构图（人/本系统/外部系统 + 关系，用 flowchart 复刻，比 C4Co |
 | 11 | A | 架构与上下文 | [`flowchart`](#flowchart) | 分层架构图（subgraph 当泳道/分层，最稳的架构画法） |
-| 12 | B | 架构与上下文 | [`arch_diagram`](#arch_diagram) | 大模型架构图（编码器/解码器堆叠 + Add & Norm + 残差 + 跨列连接，由 pa |
+| 12 | B | 架构与上下文 | [`block_diagram`](#block_diagram) | 通用块图 / 分层架构图（网格块 + 正交连线 + 侧边通道 + 分组框：模型架构、系统分层 |
 | 13 | A | 计划与协作 | [`gantt`](#gantt) | 排期 / 甘特图（依赖、里程碑、进度状态） |
 | 14 | A | 计划与协作 | [`kanban`](#kanban) | 看板（待办/进行中/已完成） |
 | 15 | A | 计划与协作 | [`journey`](#journey) | 用户旅程 / 体验地图（分阶段 + 评分） |
@@ -408,12 +408,12 @@ python3 $S --batch specs/                          # 批量出图（仓库自带
 
 <sub>A 类：`mmd` 里写 `flowchart`，spec 的 `type` 填 `flow`（骨架见 [TYPES.md](TYPES.md)） ｜ 样例图：[`docs/examples/flowchart_layered.svg`](#a-flowchart_layered)</sub>
 
-<a id="arch_diagram"></a>
-**`arch_diagram`** —— 大模型架构图（编码器/解码器堆叠 + Add & Norm + 残差 + 跨列连接，由 params.columns 描述）
+<a id="block_diagram"></a>
+**`block_diagram`** —— 通用块图 / 分层架构图（网格块 + 正交连线 + 侧边通道 + 分组框：模型架构、系统分层、数据管道都能画）
 
-![arch_diagram](docs/examples/arch_diagram.svg)
+![block_diagram](docs/examples/block_diagram.svg)
 
-<sub>spec：<code>specs/b__arch_diagram.json</code> ｜ 参数键：bus_gap · columns · head · head_label</sub>
+<sub>spec：<code>specs/b__block_diagram.json</code> ｜ 参数键：—</sub>
 
 ### A · 计划与协作（排期、看板、旅程、需求、里程碑、分支流）
 
