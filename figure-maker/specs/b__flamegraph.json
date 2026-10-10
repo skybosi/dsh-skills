@@ -15,6 +15,10 @@
    "backward;mlp 38.9",
    "dataloader 12.3",
    "optimizer 9.4"
-  ]
+  ],
+  "unit": "ms",
+  "value_labels": true,
+  "axis": true,
+  "xlabel": "占单步总耗时比例"
  }
 }

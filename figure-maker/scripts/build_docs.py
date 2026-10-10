@@ -84,9 +84,9 @@ def types_md():
         L.append('|---|---|---|---|---|')
         for e in items:
             ex = _spec_path(e)
-            exl = '[spec](../%s)' % ex if ex else '—'
+            exl = '[spec](%s)' % ex if ex else '—'      # TYPES.md 在 skill 根目录 → 用根相对路径
             svg = REL_EX % e['type']
-            imgl = '[SVG](../%s)' % svg if _exists(svg) else '—'
+            imgl = '[SVG](%s)' % svg if _exists(svg) else '—'
             L.append('| `%s` | %s | %s | %s | %s · %s |'
                      % (e['type'], e['scene'], ' · '.join(e['keywords']),
                         ' · '.join('`%s`' % p for p in e['params']) or '—', exl, imgl))
@@ -100,14 +100,17 @@ def types_md():
         L.append(e['mmd'])
         L.append('```')
         L.append('')
-    L.append('## 不支持 / 有替代写法')
+    L.append('## 替代写法 / 已知边界（都能出图，但换写法更稳）')
     L.append('')
-    L.append('| 想要 | 现状 | 替代 |')
+    L.append('| 想要 | 现状 | 建议 |')
     L.append('|---|---|---|')
-    L.append('| ZenUML（`zenuml`） | ❌ 内置的单文件 mermaid bundle 不含该图型（报 `UnknownDiagramError`） | 用 `sequenceDiagram` |')
-    L.append('| 泳道图（swimlane） | ❌ Mermaid 无此图型 | `flowchart` + `subgraph` 当泳道 |')
-    L.append('| 3D 曲面 | ⚠️ 可用但**不是首选**：本 skill 的视觉规范是二维软色板 | 优先 `contourf`（填充等高线），需要立体感再用 `surface3d` / `scatter3d` |')
-    L.append('| 带树状图的聚类热图 | ⚠️ `clustered_heatmap` 只做**聚类重排**，不画 dendrogram | 需要树状图请用外部工具（scipy/seaborn） |')
+    L.append('| 泳道图（跨职能流程） | ✅ 已支持：B 类 `swimlane`（`lanes` + `steps` + `edges`，原生绘制，布局可控） | 直接 `--example swimlane` |')
+    L.append('| 聚类树（dendrogram） | ✅ 已支持：`clustered_heatmap` 给 `dendrogram: true`（平均连接层次聚类 + 行/列树） | 需要更专业的树请用 scipy/seaborn |')
+    L.append('| ZenUML | ❌ 内置的单文件 mermaid bundle 不含该图型 | 渲染器会**直接给出** `sequenceDiagram` 骨架（alt/loop/par/Note 都支持） |')
+    L.append('| C4 上下文 / 容器图 | ⚠️ 能出图，但 Mermaid 的 C4 自动布局容易把描述文字和关系标签叠在一起（会告警 + 给建议） | 用 `flowchart` 复刻 C4 风格（见上方 arch 分类的骨架），或缩短 description |')
+    L.append('| gitGraph | ⚠️ commit 标签多时容易互相压 | 减少分支/提交，或拆图 |')
+    L.append('| radar-beta / treemap-beta / journey | ✅ 越界已由**自动扩画布**兜底（越界量记在 `meta.layout.canvasFitted`） | 维度/层级过多时仍建议减少 |')
+    L.append('| 3D 曲面 | ⚠️ 可用（`surface3d` / `scatter3d`）但不是首选：本 skill 的视觉规范是二维软色板 | 优先 `contourf`（填充等高线） |')
     L.append('')
     return '\n'.join(L) + '\n'
 

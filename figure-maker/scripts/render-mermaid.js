@@ -10,6 +10,7 @@
  *   1 = 渲染成功，但版式检查未通过（**SVG 已写出**，结果在 --json 里）
  *   2 = 用法错误
  *   3 = 渲染失败（Mermaid 解析/渲染异常，没有产物）
+ *   4 = 图型不支持（例如 zenuml；会打印可替代的写法与骨架）
  *
  * 机器版版式检查（在浏览器里用 getBoundingClientRect 实测，全部同一坐标系）：
  *   · 文字重叠 overlapText ：两个文字 bbox 相交面积占比 > 12%
@@ -127,6 +128,25 @@ function parseArgs(argv) {
   return a;
 }
 
+// Mermaid 里存在、但**内置单文件 bundle 不含**或本渲染器不支持的图型：给出替代写法与骨架
+const UNSUPPORTED = {
+  zenuml: {
+    why: 'ZenUML（内置的单文件 mermaid bundle 不含该图型）',
+    use: 'sequenceDiagram',
+    skeleton: 'sequenceDiagram\n  autonumber\n  participant C as 客户端\n  participant G as 网关\n  participant S as 订单服务\n  C->>G: submit(orderId)\n  activate G\n  G->>S: pay(orderId)\n  activate S\n  S-->>G: ok\n  deactivate S\n  G-->>C: accepted\n  deactivate G',
+  },
+};
+
+// 版式检查没过时，按图型给一条可操作的改进建议（这些图型的自带布局本来就容易挤）
+const LAYOUT_TIPS = {
+  C4Context: 'C4 的自动布局容易把「[Software System] 描述」和关系标签叠在一起：缩短 description / 减少外部系统，或改用 flowchart+subgraph 复刻（TYPES.md 的 arch 分类里有骨架）',
+  C4Container: '同上：C4 自动布局偏挤，建议缩短 description 或改用 flowchart+subgraph',
+  gitGraph: 'gitGraph 的 commit 标签容易互相压：减少分支/提交数量，或给 mermaid 配置 rotateCommitLabel（本渲染器已默认开启）',
+  journey: 'journey 的分段标题可能超出画布（已自动扩画布兜底）；段数过多时建议拆成两张',
+  'radar-beta': 'radar-beta 的轴标签可能超出画布（已自动扩画布兜底）；指标过多时建议减少维度',
+  'treemap-beta': 'treemap-beta 的叶子标签容易重叠：减少层级或改用 bar/pie 表达占比',
+};
+
 /** 扫 mmd 里几类「一定会在图上变成乱码/噪音」的写法，提前给提示（不是错误，不阻断渲染） */
 function scanHints(mmd) {
   const hints = [];
@@ -176,7 +196,7 @@ async function renderMermaid(mmd, opts = {}) {
       { waitUntil: 'load' }
     );
     await page.addScriptTag({ path: MERMAID_JS });
-    const result = await page.evaluate(async ({ code, title, curve, type, gapMin, skipOverflow, softTheme, fontStack, bg }) => {
+    const result = await page.evaluate(async ({ code, title, curve, type, gapMin, skipOverflow, softTheme, fontStack, bg, autofit }) => {
       /* global mermaid */
       const SVGNS = 'http://www.w3.org/2000/svg';
       // 规范里的 %%{init}%% 指令照旧保留在源码里；这里再把同一套参数设为**默认值**，
@@ -331,12 +351,53 @@ async function renderMermaid(mmd, opts = {}) {
       // ④ 越界（相对 SVG 画布）
       const outOfCanvas = [];
       for (const n of nodes) {
+        if (n.box.w <= 0.5 && n.box.h <= 0.5) continue;     // 未布局/占位节点不算越界
         if (n.box.x < canvasRect.x - 1 || n.box.y < canvasRect.y - 1 || n.box.r > canvasRect.r + 1 || n.box.b2 > canvasRect.b2 + 1)
           outOfCanvas.push({ el: n.txt, box: { x: +n.box.x.toFixed(1), y: +n.box.y.toFixed(1), r: +n.box.r.toFixed(1), b: +n.box.b2.toFixed(1) } });
       }
       for (const t of textBoxes) {
+        // ⚠️ 与 B 类检查同一口径：**未布局的零尺寸文本对象**（journey / treemap 里实测都是 0×0）
+        //    不是真的"跑到画布外"，不能报越界 —— 否则会误判成红线，还会让自动扩画布白忙。
+        if (t.box.w <= 0.5 || t.box.h <= 0.5) continue;
         if (t.txt.length && (t.box.x < canvasRect.x - 1 || t.box.r > canvasRect.r + 1 || t.box.y < canvasRect.y - 1 || t.box.b2 > canvasRect.b2 + 1))
           outOfCanvas.push({ el: '文字:' + t.txt, box: { x: +t.box.x.toFixed(1), y: +t.box.y.toFixed(1), r: +t.box.r.toFixed(1), b: +t.box.b2.toFixed(1) } });
+      }
+
+      // ⑤ 自动扩画布：Mermaid 有些图型（journey / radar-beta / treemap-beta …）会把自己的一部分画到
+      //    viewBox 之外 —— 内容会被裁掉。这里按实测 bbox 向外扩画布，保证内容完整，并把「原本越界了多少」
+      //    如实记进 checks.canvasFitted（不是静默修好，也不是假装没发生）。
+      let canvasFitted = null;
+      if (autofit && outOfCanvas.length) {
+        const scale = canvasW / Math.max(1, canvasRect.w);
+        const degX = canvasRect.w * 1.5, degY = canvasRect.h * 1.5;   // 忽略退化对象（3D 刻度那种）
+        let dl = 0, dr = 0, dt = 0, db = 0;
+        for (const b of nodes.map(n => n.box).concat(textBoxes.map(t => t.box))) {
+          if (!b || b.w <= 0 || b.h <= 0) continue;
+          if (b.x + b.w < canvasRect.x - degX || b.x > canvasRect.r + degX) continue;
+          if (b.b2 < canvasRect.y - degY || b.y > canvasRect.b2 + degY) continue;
+          dl = Math.max(dl, canvasRect.x - b.x);
+          dr = Math.max(dr, b.r - canvasRect.r);
+          dt = Math.max(dt, canvasRect.y - b.y);
+          db = Math.max(db, b.b2 - canvasRect.b2);
+        }
+        const M = 6;
+        dl = dl > 0 ? (dl + M) * scale : 0; dr = dr > 0 ? (dr + M) * scale : 0;
+        dt = dt > 0 ? (dt + M) * scale : 0; db = db > 0 ? (db + M) * scale : 0;
+        if (dl || dr || dt || db) {
+          canvasX -= dl; canvasW += dl + dr;
+          canvasY -= dt; canvasH += dt + db;
+          svgEl.setAttribute('viewBox', `${canvasX} ${canvasY} ${canvasW} ${canvasH}`);
+          svgEl.setAttribute('width', canvasW);
+          svgEl.setAttribute('height', canvasH);
+          const bgEl = svgEl.querySelector('#fig-background');
+          if (bgEl) {
+            bgEl.setAttribute('x', canvasX); bgEl.setAttribute('y', canvasY);
+            bgEl.setAttribute('width', canvasW); bgEl.setAttribute('height', canvasH);
+          }
+          const tEl = svgEl.querySelector('#fig-title');
+          if (tEl) tEl.setAttribute('x', String(canvasX + canvasW / 2));
+          canvasFitted = { left: +dl.toFixed(1), right: +dr.toFixed(1), top: +dt.toFixed(1), bottom: +db.toFixed(1) };
+        }
       }
 
       return {
@@ -348,12 +409,13 @@ async function renderMermaid(mmd, opts = {}) {
           gapMin,
           overlapText,
           overflow,
-          outOfCanvas,
+          outOfCanvas,          // 扩画布**之前**的越界清单（保留原始信号）
+          canvasFitted,         // 非 null 表示已自动扩过画布，值为四边扩了多少（user unit）
           nodeGap: { min: minGap === Infinity ? null : +minGap.toFixed(1), pair: tight },
         },
       };
     }, { code: mmd, title, curve: opts.curve || '', type, gapMin, skipOverflow: SKIP_OVERFLOW.has(type),
-         softTheme: SOFT_THEME, fontStack: FONT_STACK, bg: opts.bg !== false });
+         softTheme: SOFT_THEME, fontStack: FONT_STACK, bg: opts.bg !== false, autofit: opts.autofit !== false });
     // 提示在 Node 侧算（要扫源码），挂到 checks 上一起回传
     result.checks.warnings = warnings;
     return result;
@@ -364,7 +426,9 @@ async function renderMermaid(mmd, opts = {}) {
 
 /** 检查结果 → 是否全绿（gapMin 为 null 表示该图型不套间距红线） */
 function checksPass(c) {
-  return c.overlapText.length === 0 && c.overflow.length === 0 && c.outOfCanvas.length === 0 &&
+  // 自动扩过画布 → 越界内容已经全部可见，不再算红线（原始越界数量仍在 checks.outOfCanvas 里可查）
+  const outBad = c.canvasFitted ? 0 : c.outOfCanvas.length;
+  return c.overlapText.length === 0 && c.overflow.length === 0 && outBad === 0 &&
          (c.gapMin === null || c.gapMin === undefined || c.nodeGap.min === null || c.nodeGap.min >= c.gapMin);
 }
 
@@ -383,10 +447,18 @@ async function main() {
   }
   let res;
   const bg = !(a.bg === '0' || a.bg === 'false');   // 白底默认开，--bg 0 关
+  const autofit = !(a.autofit === '0' || a.autofit === 'false');
   try {
     res = await renderMermaid(mmd, { title: typeof a.title === 'string' ? a.title : '',
-                                     curve: typeof a.curve === 'string' ? a.curve : '', bg });
+                                     curve: typeof a.curve === 'string' ? a.curve : '', bg, autofit });
   } catch (e) {
+    const t = diagramType(mmd);
+    if (UNSUPPORTED[t]) {
+      console.error('❌ 不支持该图型：' + UNSUPPORTED[t].why);
+      console.error('   → 建议改用 `' + UNSUPPORTED[t].use + '`，骨架如下（可直接放进 spec 的 mmd）：');
+      console.error(UNSUPPORTED[t].skeleton.split('\n').map(l => '     ' + l).join('\n'));
+      process.exit(4);            // 4 = 图型不支持（与渲染失败 3 区分开）
+    }
     const msg = String((e && e.message) || e).split('\n')[0];
     console.error('❌ mermaid 渲染失败：' + msg);
     const st = String((e && e.stack) || '').split('\n').slice(1, 3).join('\n');
@@ -397,6 +469,10 @@ async function main() {
   if (out) { fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true }); fs.writeFileSync(out, res.svg); }
   const c = res.checks;
   const ok = checksPass(c);
+  if (!ok && LAYOUT_TIPS[c.diagramType]) {
+    c.tip = LAYOUT_TIPS[c.diagramType];
+    console.error('💡 ' + c.tip);
+  }
   console.log(JSON.stringify({ out, size: res.size, counts: res.counts, diagramType: c.diagramType, pass: ok, checks: c }, null, 1));
   if (typeof a.json === 'string' && a.json) fs.writeFileSync(a.json, JSON.stringify(c, null, 1));
   process.exit(ok ? 0 : 1);   // 1 = 检查未过（SVG 已写出）；渲染失败在上面 exit(3)

@@ -20,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # 场景分类：id / 类(A|B) / 名称 / 什么时候用 / 该类的通用关键词
 # ---------------------------------------------------------------------------
 CATEGORIES = [
-    ("flow",        "A", "流程与决策",     "业务流程、算法流程、判定分支与回退",     ["流程图", "流程", "判定", "分支", "审批", "步骤", "flowchart"]),
+    ("flow",        "A/B", "流程与决策",     "业务流程、算法流程、判定分支与回退",     ["流程图", "流程", "判定", "分支", "审批", "步骤", "flowchart"]),
     ("interaction", "A", "交互与时序",     "接口调用顺序、消息交互、上下游协作",     ["时序图", "调用链", "交互", "消息", "顺序", "sequence"]),
     ("state",       "A", "状态与生命周期", "订单/任务/连接的状态迁移",               ["状态机", "状态", "迁移", "生命周期", "state"]),
     ("model",       "A", "数据与领域模型", "ER 关系图、类图、业务关系图",            ["ER", "关系图", "数据模型", "类图", "领域模型", "业务关系", "实体"]),
@@ -66,6 +66,9 @@ A_FAMILIES = [
     ("flow", "C4Context", "arch", "C4 上下文/容器图（人-系统-外部系统关系）",
      ["C4", "上下文图", "系统上下文", "外部系统"],
      "C4Context\n  title 系统上下文\n  Person(user, \"用户\", \"说明\")\n  System(sys, \"本系统\", \"说明\")\n  System_Ext(ext, \"外部系统\", \"说明\")\n  Rel(user, sys, \"使用\")\n  Rel(sys, ext, \"调用\""),
+    ("flow", "flowchart", "arch", "C4 风格架构图（人/本系统/外部系统 + 关系，用 flowchart 复刻，比 C4Context 可控）",
+     ["C4 架构图", "C4 上下文图", "C4", "上下文图", "系统上下文", "外部系统", "架构上下文"],
+     "flowchart LR\n  U([用户]) --> S[本系统]\n  S --> E1[外部系统 A]\n  S --> E2[外部系统 B]\n  classDef person fill:#FBE4D5,stroke:#E9B08A,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  classDef sys fill:#DBEAFE,stroke:#93C5FD,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  classDef ext fill:#F1F3F5,stroke:#ADB5BD,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  class U person;\n  class S sys;\n  class E1,E2 ext;"),
     ("flow", "flowchart", "arch", "分层架构图（subgraph 当泳道/分层，最稳的架构画法）",
      ["分层架构", "分层图", "泳道", "子系统", "模块图"],
      "flowchart LR\n  subgraph 接入层\n    LB[负载均衡] --> GW[网关]\n  end\n  subgraph 服务层\n    OS[订单服务] --> PS[支付服务]\n  end\n  subgraph 存储层\n    DB[(MySQL)]\n    RD[(Redis)]\n  end\n  GW --> OS\n  OS --> DB\n  OS --> RD"),
@@ -126,6 +129,7 @@ B_TYPES = {
     "stacked_bar": ("compare", "构成占比随时间/类目变化（堆叠）", ["堆叠", "构成", "占比"], "b__stacked_bar.json"),
     "multi_bar": ("compare", "多个子图并排的多组柱（跨组对比）", ["多子图柱", "并排", "panel bar"], "b__multi_bar.json"),
     "pie": ("compare", "整体构成占比（类别少时）", ["饼图", "占比", "构成", "pie"], "b__pie.json"),
+    "swimlane": ("flow", "泳道图 / 跨职能流程图（原生绘制，最可控）", ["泳道图", "跨职能", "swimlane", "泳道", "责任分工"], "b__swimlane.json"),
     "waterfall": ("compare", "增量分解 / 特征贡献（瀑布图）", ["瀑布", "增量", "贡献", "归因", "waterfall"], "b__waterfall.json"),
     "radar": ("compare", "多指标多方案雷达对比", ["雷达", "多指标", "蜘蛛", "radar"], "b__radar.json"),
     "venn2": ("compare", "两个集合的交并关系", ["韦恩", "交集", "重叠", "venn"], "b__venn2.json"),

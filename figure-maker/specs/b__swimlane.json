@@ -1,0 +1,140 @@
+{
+ "id": "research-swimlane",
+ "type": "swimlane",
+ "output": "out/research-swimlane.svg",
+ "params": {
+  "title": "线上问题处理流程（跨职能泳道图）",
+  "direction": "LR",
+  "lanes": [
+   {
+    "id": "cs",
+    "label": "客服"
+   },
+   {
+    "id": "sre",
+    "label": "值班 SRE"
+   },
+   {
+    "id": "dev",
+    "label": "研发"
+   },
+   {
+    "id": "rel",
+    "label": "发布系统"
+   }
+  ],
+  "steps": [
+   {
+    "id": "u1",
+    "lane": "cs",
+    "label": "收到用户反馈",
+    "col": 0,
+    "color": "orange"
+   },
+   {
+    "id": "s1",
+    "lane": "sre",
+    "label": "建单并分级",
+    "col": 1
+   },
+   {
+    "id": "s2",
+    "lane": "sre",
+    "label": "查监控 / 日志",
+    "col": 2
+   },
+   {
+    "id": "s3",
+    "lane": "sre",
+    "label": "临时止血\n（回滚/降级）",
+    "col": 3,
+    "color": "grey"
+   },
+   {
+    "id": "d1",
+    "lane": "dev",
+    "label": "定位根因",
+    "col": 3
+   },
+   {
+    "id": "d2",
+    "lane": "dev",
+    "label": "修复 + 代码评审",
+    "col": 4
+   },
+   {
+    "id": "r1",
+    "lane": "rel",
+    "label": "灰度发布",
+    "col": 5,
+    "color": "purple"
+   },
+   {
+    "id": "s4",
+    "lane": "sre",
+    "label": "观察核心指标",
+    "col": 6
+   },
+   {
+    "id": "r2",
+    "lane": "rel",
+    "label": "全量发布",
+    "col": 7,
+    "color": "purple"
+   },
+   {
+    "id": "u2",
+    "lane": "cs",
+    "label": "回复用户 + 复盘",
+    "col": 8,
+    "color": "green"
+   }
+  ],
+  "edges": [
+   [
+    "u1",
+    "s1"
+   ],
+   [
+    "s1",
+    "s2"
+   ],
+   [
+    "s2",
+    "s3"
+   ],
+   [
+    "s2",
+    "d1"
+   ],
+   [
+    "d1",
+    "d2"
+   ],
+   [
+    "d2",
+    "r1"
+   ],
+   [
+    "r1",
+    "s4"
+   ],
+   [
+    "s3",
+    "s4"
+   ],
+   [
+    "s4",
+    "r2"
+   ],
+   [
+    "s4",
+    "u2"
+   ],
+   [
+    "r2",
+    "u2"
+   ]
+  ]
+ }
+}

@@ -13,7 +13,7 @@ import math
 import numpy as np
 # ⚠️ 必须**先**导入 style：它在模块顶层设置 MPLCONFIGDIR（否则 matplotlib 会去写 ~/.matplotlib，
 #    在沙箱里直接报 “not a writable directory” 并退化到临时目录重建字体缓存）。
-from style import SOFT_COLORS, soft, new_fig, save, check_layout, report_and_exit, INK
+from style import SOFT_COLORS, FILL, soft, new_fig, save, check_layout, report_and_exit, INK
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Rectangle, Polygon
 
@@ -1214,6 +1214,11 @@ def _eval_func2(expr, X, Y):
     return eval(compile(expr, "<func2>", "eval"), {"__builtins__": {}}, env)  # noqa: S307（白名单）
 
 
+def _text_px(text, fontsize=10.0):
+    """粗估一段文字的显示宽度（px）：CJK 约 14px/字、ASCII 约 7.6px/字符（同 _tick_labels 的口径）。"""
+    return sum(14.0 if ord(ch) > 0x2E80 else 7.6 for ch in str(text)) * (float(fontsize) / 12.0)
+
+
 def _series_xy(s, i):
     """统一解析一条 series 的 (x, mean, std)。支持 mean/std、seeds（多次实验）、lo/hi。"""
     y = s.get("mean") or s.get("y") or s.get("values")
@@ -1553,9 +1558,16 @@ def draw_radar(p, out_path, width_in=8.0, height_in=4.5):
 
 
 def draw_flamegraph(p, out_path, width_in=8.0, height_in=4.5):
-    """火焰图：把层级耗时画成「宽度=占比、深度=调用层级」的堆叠矩形。
+    """火焰图：**宽度 = 耗时占比，深度 = 调用层级**（自顶向下，父帧横向包住子帧）。
 
-    params: stacks[{name, value, children[]}] 或 folded["a;b;c 12", …] · max_depth · min_label_ratio
+    params: folded["a;b;c 12", …] 或 stacks[{name, value, children[]}] ·
+            show_root · hide_root（旧名，等价）· labels · value_labels · axis · sortby · min_label_ratio
+
+    ⚠️ 与上一版的区别（上一版看着"怪"的三个原因）：
+      1. 隐藏 root 时还给它留了一整行 → 图上方一大片空白；现在行号从 0 起算，紧贴标题
+      2. 窄帧的标签被硬截成 "dat…" / "opt…"；现在**放不下就不画**（不再出现残缺文字），
+         放得下且开了 value_labels 时显示 "42.5 (20%)"
+      3. 没有刻度/量纲提示；axis=true 时给出 0–100% 轴，value_labels 给绝对值+百分比
     """
     def from_folded(lines):
         root = {"name": "all", "value": 0.0, "children": {}}
@@ -1566,7 +1578,7 @@ def draw_flamegraph(p, out_path, width_in=8.0, height_in=4.5):
             parts = line.rsplit(" ", 1)
             if len(parts) != 2:
                 continue
-            path, val = [s for s in parts[0].split(";") if s], float(parts[1])
+            path, val = [x for x in parts[0].split(";") if x], float(parts[1])
             root["value"] += val
             node = root
             for seg in path:
@@ -1581,42 +1593,75 @@ def draw_flamegraph(p, out_path, width_in=8.0, height_in=4.5):
             kids = {("%s#%d" % (c.get("name", ""), i)): norm(c, i) for i, c in enumerate(n.get("children") or [])}
             val = float(n.get("value", 0) or 0) or sum(k["value"] for k in kids.values())
             return {"name": str(n.get("name", "")), "value": val, "children": kids}
-        root = {"name": "all", "value": sum(float(s.get("value", 0)) for s in p["stacks"]),
-                "children": {("%s#%d" % (s.get("name", ""), i)): norm(s, i) for i, s in enumerate(p["stacks"])}}
+        root = {"name": "all", "value": sum(float(x.get("value", 0)) for x in p["stacks"]),
+                "children": {("%s#%d" % (x.get("name", ""), i)): norm(x, i) for i, x in enumerate(p["stacks"])}}
     else:
-        raise SystemExit("flamegraph 需要 stacks 或 folded")
+        raise SystemExit("flamegraph 需要 folded 或 stacks")
+
     total = root["value"] or 1.0
+    show_root = bool(p.get("show_root", not p.get("hide_root", True)))
+    sortby = p.get("sortby", "value")
     frames = []
 
     def layout(node, x0, depth):
         frames.append((node["name"], x0, node["value"], depth))
-        kids = sorted(node["children"].values(), key=lambda k: -k["value"])
+        kids = list(node["children"].values())
+        if sortby == "value":
+            kids.sort(key=lambda k: -k["value"])
+        elif sortby == "name":
+            kids.sort(key=lambda k: str(k["name"]))
         cx = x0
         for c in kids:
             layout(c, cx, depth + 1)
             cx += c["value"]
+
     layout(root, 0.0, 0)
-    max_depth = max(f[3] for f in frames) if frames else 1
-    fig, ax = new_fig(width_in, max(height_in, 0.42 * (max_depth + 1) + 1.2))
-    ax.set_xlim(0, total); ax.set_ylim(max_depth + 1.15, -0.15)
-    ax.axis("off")
+    depth0 = 0 if show_root else 1                      # 隐藏 root 时不留空行（修掉顶部大片空白）
+    vis = [f for f in frames if f[3] >= depth0]
+    n_rows = max(1, max(f[3] for f in vis) - depth0 + 1)
+    row_h = float(p.get("row_height", 0.86))
+    show_total = p.get("show_total", True)
+    fig_h = max(float(height_in), 0.46 * n_rows + 0.85)
+    fig, ax = new_fig(width_in, fig_h)
+    ax.set_xlim(0, total)
+    bottom = (n_rows - 1) + row_h + (0.62 if show_total else 0.10)
+    ax.set_ylim(bottom, -0.10)
     depth_cols = ["blue", "green", "orange", "purple", "grey", "red", "dark"]
-    min_ratio = float(p.get("min_label_ratio", 0.03))
-    for name, x0, w, d in frames:
-        if d == 0 and p.get("hide_root", True):
+    # 用户单位 → 像素的粗略换算：按轴宽估（画布留边约 12%）
+    px_per_unit = (float(width_in) * 0.88 * 96.0) / total
+    min_ratio = float(p.get("min_label_ratio", 0.0))
+    for name, x0, w, d in vis:
+        row = d - depth0
+        col = SOFT_COLORS[depth_cols[(max(1, d) - 1) % len(depth_cols)]]
+        ax.add_patch(Rectangle((x0, row), w, row_h, facecolor=col, edgecolor="#FFFFFF", linewidth=0.8))
+        if not p.get("labels", True) or not name:
             continue
-        col = SOFT_COLORS[depth_cols[(d - 1) % len(depth_cols)]]
-        ax.add_patch(Rectangle((x0, d), w, 0.86, facecolor=col, edgecolor="#FFFFFF", linewidth=0.7))
-        if w / total >= min_ratio and name:
-            label = str(name)
-            if len(label) > max(4, int(w / total * 46)):
-                label = label[:max(4, int(w / total * 46)) - 1] + "…"
-            ax.text(x0 + w / 2, d + 0.43, label, ha="center", va="center", fontsize=8.5,
-                    color=INK["text"], clip_on=True)
+        avail = w * px_per_unit - 10
+        tname = str(name)
+        need = _text_px(tname, 9.0)
+        if p.get("value_labels"):
+            vt = "%.4g (%d%%)" % (w, round(w / total * 100))
+            if need + _text_px(vt, 8.0) + 14 <= avail:
+                ax.text(x0 + w / 2, row + row_h * 0.30, tname, ha="center", va="center", fontsize=9, color=INK["text"])
+                ax.text(x0 + w / 2, row + row_h * 0.66, vt, ha="center", va="center", fontsize=8, color=INK["axis"])
+                continue
+        if need <= avail and w / total >= min_ratio:
+            ax.text(x0 + w / 2, row + row_h / 2, tname, ha="center", va="center", fontsize=9, color=INK["text"])
+    if p.get("axis"):
+        ax.set_xticks([0, total * 0.25, total * 0.5, total * 0.75, total])
+        ax.set_xticklabels(["0%", "25%", "50%", "75%", "100%"])
+        ax.set_xlabel(p.get("xlabel", "占总量比例"))
+    else:
+        ax.set_xticks([])
+    ax.set_yticks([])
+    for sp in ("left", "bottom"):
+        ax.spines[sp].set_visible(False)
+    if show_total:
+        unit = (" " + str(p["unit"])) if p.get("unit") else ""
+        ax.text(0, bottom - 0.34, "%s合计 %.4g%s（每帧宽度 = 占总量比例）"
+                % (str(p.get("total_label", "") + " " if p.get("total_label") else ""), root["value"], unit),
+                ha="left", va="center", fontsize=9.5, color=INK["tick"])
     ax.set_title(p.get("title", ""), pad=12)
-    if p.get("show_total", True):
-        ax.text(0, max_depth + 0.7, "总样本 %.4g" % root["value"], ha="left", va="center",
-                fontsize=9.5, color=INK["tick"])
     return _finish(fig, out_path)
 
 
@@ -2051,18 +2096,25 @@ def draw_volcano(p, out_path, width_in=8.0, height_in=4.5):
     return _finish(fig, out_path)
 
 
-def _cluster_order(mat):
-    """平均连接层次聚类，返回叶序（纯 numpy 实现，不依赖 scipy）。"""
+def _cluster_tree(mat):
+    """平均连接（UPGMA）层次聚类，纯 numpy 实现：返回 (叶序, merges, sizes)。
+
+    merges[k] = (a, b, dist)，新簇 id = n + k；sizes[c] = 该簇叶子数。
+    """
     n = len(mat)
-    if n < 3:
-        return list(range(n))
+    if n < 2:
+        return list(range(n)), [], {i: 1 for i in range(n)}
+    if n == 2:
+        d = float(np.linalg.norm(mat[0] - mat[1]))
+        return [0, 1], [(0, 1, d)], {0: 1, 1: 1, 2: 2}
     D = {i: {} for i in range(n)}
     for i in range(n):
         for j in range(i + 1, n):
             d = float(np.linalg.norm(mat[i] - mat[j]))
             D[i][j] = d; D[j][i] = d
     members = {i: [i] for i in range(n)}
-    active = list(range(n)); nxt = n
+    sizes = {i: 1 for i in range(n)}
+    active = list(range(n)); nxt = n; merges = []
     while len(active) > 1:
         best = None
         for ai in range(len(active)):
@@ -2071,23 +2123,44 @@ def _cluster_order(mat):
                 d = D[a][b]
                 if best is None or d < best[0]:
                     best = (d, a, b)
-        _, a, b = best
+        d, a, b = best
+        merges.append((a, b, d))
         members[nxt] = members[a] + members[b]
+        sizes[nxt] = sizes[a] + sizes[b]
         D.setdefault(nxt, {})
         for k in active:
             if k in (a, b):
                 continue
-            d = 0.5 * (D[a][k] + D[b][k])          # 平均连接（UPGMA）
-            D[nxt][k] = d; D[k][nxt] = d
+            dd = 0.5 * (D[a][k] + D[b][k])       # 平均连接
+            D[nxt][k] = dd; D[k][nxt] = dd
         active = [k for k in active if k not in (a, b)] + [nxt]
         nxt += 1
-    return members[active[0]]
+    return members[active[0]], merges, sizes
+
+
+def _dendro_segments(merges, order):
+    """把 merges 转成折线：返回 [(leaf1, dist1, leaf2, dist2), …]，leaf 坐标 = 叶序 + 0.5。"""
+    rank = {leaf: i for i, leaf in enumerate(order)}
+    span = {leaf: (rank[leaf], rank[leaf]) for leaf in order}
+    hgt = {leaf: 0.0 for leaf in order}
+    segs = []
+    for k, (a, b, d) in enumerate(merges):
+        ca = (span[a][0] + span[a][1] + 1) / 2.0
+        cb = (span[b][0] + span[b][1] + 1) / 2.0
+        segs.append((ca, hgt[a], ca, d))
+        segs.append((cb, hgt[b], cb, d))
+        segs.append((ca, d, cb, d))
+        nid = len(order) + k
+        span[nid] = (min(span[a][0], span[b][0]), max(span[a][1], span[b][1]))
+        hgt[nid] = d
+    return segs
 
 
 def draw_clustered_heatmap(p, out_path, width_in=8.0, height_in=4.5):
-    """表达矩阵热图：可 z-score、可按层次聚类重排行列（聚类只重排，不画树）。
+    """表达矩阵热图：可选 z-score、按层次聚类重排行列、**可选画 dendrogram 聚类树**。
 
-    params: data[][] · row_labels[] · col_labels[] · zscore（'row'|'none'）· cluster（'rows'|'both'|'none'）· colorbar
+    params: data[][] · row_labels[] · col_labels[] · zscore（'row'|'col'|'none'）·
+            cluster（'rows'|'both'|'none'）· dendrogram（true 时画树）· colorbar · cmap
     """
     d = np.asarray(p.get("data", []), dtype=float)
     if not d.size:
@@ -2102,32 +2175,75 @@ def draw_clustered_heatmap(p, out_path, width_in=8.0, height_in=4.5):
     else:
         z = d
     cl = p.get("cluster", "rows")
-    rows = list(range(z.shape[0])); cols = list(range(z.shape[1]))
-    if cl in ("rows", "both"):
-        rows = _cluster_order(z)
-    if cl == "both":
-        cols = _cluster_order(z.T)
+    want_tree = bool(p.get("dendrogram"))
+    rows = list(range(d.shape[0])); cols = list(range(d.shape[1]))
+    row_segs = col_segs = None
+    if cl in ("rows", "both") and d.shape[0] >= 2:
+        order, merges, _sizes = _cluster_tree(d)        # 聚类用原始矩阵（不是 z-score 后的）
+        rows = order
+        if want_tree:
+            row_segs = _dendro_segments(merges, order)
+    if cl == "both" and d.shape[1] >= 2:
+        order_c, merges_c, _sz = _cluster_tree(d.T)
+        cols = order_c
+        if want_tree:
+            col_segs = _dendro_segments(merges_c, order_c)
     z = z[np.ix_(rows, cols)]
-    row_labels = [str(x) for x in p.get("row_labels", [])]
-    col_labels = [str(x) for x in p.get("col_labels", [])]
-    row_labels = [row_labels[i] for i in rows] if len(row_labels) == d.shape[0] else []
-    col_labels = [col_labels[i] for i in cols] if len(col_labels) == d.shape[1] else []
-    fig, ax = new_fig(width_in, height_in)
+    rl = [str(x) for x in p.get("row_labels", [])]
+    clab = [str(x) for x in p.get("col_labels", [])]
+    rl = [rl[i] for i in rows] if len(rl) == d.shape[0] else []
+    clab = [clab[i] for i in cols] if len(clab) == d.shape[1] else []
     v = float(np.max(np.abs(z))) or 1.0
-    im = ax.imshow(z, cmap=_soft_cmap(p.get("cmap", "diverging")), vmin=-v, vmax=v, aspect="auto")
+    cmap = _soft_cmap(p.get("cmap", "diverging"))
+
+    if row_segs or col_segs:
+        # 2×2：左上留空，右上是列树，左下是行树，右下是热图
+        fig = plt.figure(figsize=(width_in, height_in))
+        gs = fig.add_gridspec(2, 2, width_ratios=[0.15 if row_segs else 0.001, 1],
+                              height_ratios=[0.16 if col_segs else 0.001, 1],
+                              wspace=0.22 if row_segs else 0.02, hspace=0.03)
+        fig.set_layout_engine("none")
+        ax = fig.add_subplot(gs[1, 1])
+        axr = fig.add_subplot(gs[1, 0]) if row_segs else None
+        axc = fig.add_subplot(gs[0, 1]) if col_segs else None
+    else:
+        fig, ax = new_fig(width_in, height_in)
+        axr = axc = None
+
+    im = ax.imshow(z, cmap=cmap, vmin=-v, vmax=v, aspect="auto")
     ax.set_xticks(range(z.shape[1]))
-    if col_labels:
-        ax.set_xticklabels(col_labels, rotation=45, ha="right", fontsize=9)
+    if clab:
+        ax.set_xticklabels(clab, rotation=45, ha="right", fontsize=9)
     ax.set_yticks(range(z.shape[0]))
-    if row_labels:
-        ax.set_yticklabels(row_labels, fontsize=9)
+    if rl:
+        ax.set_yticklabels(rl, fontsize=9)   # 标签留在热图左侧的槽位里（放右侧会和色条重叠）
     ax.grid(False)
-    ax.set_title(p.get("title", ""), pad=12)
-    ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
+    ax.set_xlabel(p.get("xlabel", ""))
+    if p.get("ylabel") and axr is None:
+        ax.set_ylabel(p["ylabel"], fontsize=10)
+    if axr is not None:
+        for (l1, d1, l2, d2) in row_segs:
+            axr.plot([d1, d2], [l1, l2], color=INK["tick"], linewidth=0.9)
+        axr.set_ylim(z.shape[0], 0)
+        axr.invert_xaxis()                        # 距离大的根在左侧
+        axr.axis("off")
+    if axc is not None:
+        for (l1, d1, l2, d2) in col_segs:
+            axc.plot([l1, l2], [d1, d2], color=INK["tick"], linewidth=0.9)
+        axc.set_xlim(0, z.shape[1])
+        axc.axis("off")
+    if axc is not None:
+        fig.suptitle(p.get("title", ""), y=0.985, fontsize=14, fontweight="bold", color=INK["title"])
+    else:
+        ax.set_title(p.get("title", ""), pad=12)
     if p.get("colorbar", True):
-        cb = fig.colorbar(im, ax=ax, shrink=0.9, pad=0.02)
+        # ⚠️ 必须挂在**热图轴**上：挂到列树轴上会把色条压成一条细缝，刻度标签互相重叠
+        cb = fig.colorbar(im, ax=ax, shrink=0.92, pad=0.02)
         cb.set_label(p.get("colorbar_label", "z-score" if mode != "none" else ""), color=INK["axis"], fontsize=11)
         cb.outline.set_edgecolor("#E2E8F0")
+    if row_segs or col_segs:
+        # 关掉 autolayout 后必须自己留边距，否则底部 xlabel 会掉到画布外
+        fig.subplots_adjust(left=0.04, right=0.90, top=0.92, bottom=0.18)
     return _finish(fig, out_path)
 
 
@@ -2225,3 +2341,96 @@ DRAWERS.update({
     "box_jitter": draw_box_jitter, "km": draw_km, "forest": draw_forest, "volcano": draw_volcano,
     "clustered_heatmap": draw_clustered_heatmap, "surface3d": draw_surface3d, "scatter3d": draw_scatter3d,
 })
+
+
+def draw_swimlane(p, out_path, width_in=8.0, height_in=4.5):
+    """泳道图（跨职能流程图）：Mermaid 没有这个图型，这里用 matplotlib 原生画。
+
+    params: lanes[{id, label, color}] · steps[{id, lane, label, col?, color?}] ·
+            edges[[from, to]] · direction（'LR' 泳道横排 / 'TD' 泳道竖排）· step_width · row_height
+
+    布局规则（确定性，不用随机）：步骤按数组顺序排成列（可用 col 指定同列并行），泳道决定行；
+    连线用直角折线箭头，跨泳道时自动拐弯。
+    """
+    lanes = list(p.get("lanes") or [])
+    steps = list(p.get("steps") or [])
+    if not lanes or not steps:
+        raise SystemExit("swimlane 需要 lanes[] 与 steps[]")
+    lane_idx = {}
+    for i, ln in enumerate(lanes):
+        lane_idx[str(ln.get("id", ln.get("label", i)))] = i
+    direction = str(p.get("direction", "LR")).upper()
+    # 列号：显式 col 优先，否则按出现顺序递增
+    col_of = []
+    nxt = 0
+    for st in steps:
+        c = st.get("col")
+        if c is None:
+            c = nxt
+        col_of.append(int(c))
+        nxt = max(nxt, int(c) + 1)
+    ncol = max(col_of) + 1 if col_of else 1
+    nrow = len(lanes)
+    if direction == "TD":
+        nu, nv = nrow, ncol                       # 泳道当作列（u），步骤沿 v 向下
+    else:
+        nu, nv = ncol, nrow                       # 泳道当作行（v），步骤沿 u 向右
+    fig, ax = new_fig(max(width_in, 1.05 * nu + 1.6), max(height_in, 0.72 * nv + 1.4))
+    if direction == "TD":
+        ax.set_xlim(-0.5, nu - 0.5); ax.set_ylim(nv - 0.5, -1.05)   # 顶部留给泳道名
+    else:
+        ax.set_xlim(-1.05, nu - 0.5); ax.set_ylim(nv - 0.5, -0.5)   # 左侧留给泳道名
+    ax.axis("off")
+    band = FILL["neutral"]
+    for i, ln in enumerate(lanes):
+        col = soft(ln.get("color")) if ln.get("color") else None
+        fc = ("#FFFFFF" if i % 2 else band) if col is None else col
+        if direction == "TD":
+            ax.add_patch(Rectangle((i - 0.5, -0.5), 1.0, nv, facecolor=fc, edgecolor="#E2E8F0", linewidth=0.8))
+            ax.text(i, -0.34, str(ln.get("label", "")), ha="center", va="bottom", fontsize=10.5,
+                    color=INK["title"], fontweight="bold")
+        else:
+            ax.add_patch(Rectangle((-0.5, i - 0.5), nu, 1.0, facecolor=fc, edgecolor="#E2E8F0", linewidth=0.8))
+            ax.text(-0.56, i, str(ln.get("label", "")), ha="right", va="center", fontsize=10.5,
+                    color=INK["title"], fontweight="bold")
+    # 步骤方块
+    sw = float(p.get("step_width", 0.72))
+    sh = min(0.62, float(p.get("row_height", 0.62)))
+    centers = {}
+    for k, st in enumerate(steps):
+        li = lane_idx.get(str(st.get("lane")))
+        if li is None:
+            raise SystemExit("swimlane：step %r 的 lane 不在 lanes 里" % st.get("id"))
+        col = soft(st.get("color")) if st.get("color") else SOFT_COLORS["blue"]
+        if direction == "TD":
+            u, vv = li, col_of[k]
+        else:
+            u, vv = col_of[k], li
+        ax.add_patch(Rectangle((u - sw / 2, vv - sh / 2), sw, sh, facecolor=col, edgecolor="#FFFFFF",
+                               linewidth=1.0, zorder=3))
+        ax.text(u, vv, str(st.get("label", st.get("id", ""))), ha="center", va="center", fontsize=9.5,
+                color=INK["text"], zorder=4)
+        centers[str(st.get("id", k))] = (u, vv)
+    # 连线（直角折线 + 箭头）
+    for e in (p.get("edges") or []):
+        if len(e) < 2:
+            continue
+        a, b = centers.get(str(e[0])), centers.get(str(e[1]))
+        if a is None or b is None:
+            continue
+        same_lane = abs(a[1] - b[1]) < 1e-9
+        forward = (b[0] > a[0]) if direction != "TD" else (b[1] > a[1])
+        start = (a[0] + sw / 2, a[1]) if (forward and direction != "TD") else \
+                ((a[0], a[1] + sh / 2) if (forward and direction == "TD") else a)
+        end = (b[0] - sw / 2, b[1]) if (forward and direction != "TD") else \
+              ((b[0], b[1] - sh / 2) if (forward and direction == "TD") else b)
+        props = dict(arrowstyle="-|>", color=INK["tick"], linewidth=1.3, shrinkA=0, shrinkB=2)
+        if not same_lane:      # 跨泳道才需要直角拐弯；同泳道直连，避免退化折线
+            props["connectionstyle"] = ("angle,angleA=-90,angleB=180,rad=6" if direction == "TD"
+                                        else "angle,angleA=0,angleB=90,rad=6")
+        ax.annotate("", xy=end, xytext=start, arrowprops=props, zorder=2)
+    ax.set_title(p.get("title", ""), pad=12)
+    return _finish(fig, out_path)
+
+
+DRAWERS.update({"swimlane": draw_swimlane})   # 定义在本文件末尾，注册放在最后

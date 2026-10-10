@@ -16,7 +16,7 @@ whenToUse: 用户要**画图/生成图表**（结构图、流程图、时序图�
 
 ## 第一步永远是选型：先分类，再路由
 
-图型有 91 个条目（24 个 Mermaid 图族 + 67 种数据图），**不要靠记忆挑**，按下面三步走：
+图型有 93 个条目（25 个 Mermaid 图族 + 68 种数据图），**不要靠记忆挑**，按下面三步走：
 
 | 情况 | 动作 |
 |---|---|
@@ -46,13 +46,14 @@ python3 $S --example line_band                 # 该图型的真实骨架（取�
 
 | 类 | 数量 | 渲染器 | spec 里给什么 | 产物格式 |
 |---|---|---|---|---|
-| **A 类 · 结构/关系图** | 24 个 Mermaid 图族（`type` 填 6 个入口名中任意一个） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
-| **B 类 · 数据/统计/科研图** | 67 种 | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff |
+| **A 类 · 结构/关系图** | 25 个 Mermaid 图族（`type` 填 6 个入口名中任意一个） | Mermaid（内置运行时） | `mmd` 源码 | svg / png / webp |
+| **B 类 · 数据/统计/科研图** | 68 种（含 `swimlane` 泳道图） | Matplotlib | `params` | svg / png / webp / pdf / eps / ps / jpeg / tiff |
 
 A 类不限于 24 个图族 —— 凡 Mermaid v11 支持的图型都能画（`flowchart` `sequenceDiagram` `stateDiagram-v2`
 `classDiagram` `erDiagram` `architecture-beta` `C4Context` `gantt` `kanban` `journey` `requirementDiagram`
 `timeline` `mindmap` `gitGraph` `block-beta` `packet-beta` `pie` `quadrantChart` `xychart-beta` `sankey-beta`
-`treemap-beta` `radar-beta` …）。**明确不可用**：`zenuml`（内置 bundle 不含该图型）、泳道图（Mermaid 没有，用 `subgraph` 近似）。
+`treemap-beta` `radar-beta` …）。**明确不可用**：`zenuml`（内置 bundle 不含该图型）—— 这时渲染器会**直接打印可替代的骨架**（改用 `sequenceDiagram`）并以退出码 4 结束，不用你自己猜。
+**泳道图**（跨职能流程图）Mermaid 没有，但本 skill 用原生绘制补上了：B 类 `swimlane`（`lanes` + `steps` + `edges`，布局可控）。
 
 ## 快速开始（独立，零配置）
 
@@ -144,6 +145,7 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 | 文字重叠 | **0** | `--check`（像素空间比较；已过滤 1×1 占位文本、轴外刻度、隐藏轴、3D 退化对象） |
 | 文字越界（出画布） | **0** | 同上；右缘 x 与 y 都要看 |
 | A 类节点间距 | **按图型分级**：flowchart ≥20px；状态/类/ER/需求图 ≥12px；其它图型不套用 | 渲染器内部判定，结果写进 meta 的 `layout.gapMin/nodeGap` |
+| A 类内容越界 | 0（否则**自动扩画布**兜底，扩了多少记在 `layout.canvasFitted`） | 自动；`autofit: false` 可关 |
 | 长标签折行 | 无"标点开头/结尾"的丑折行 | 目视；中文按视觉宽度折行 |
 
 **检查语义**：默认**只告警不拦截**（结果写进 `meta.layout`，stdout 打印「通过 / 有告警」）；
@@ -159,17 +161,18 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 6. **多子图**：画布宽度随列数放大（每子图建议 ≥2.9 英寸），否则中文标题必被挤或越右缘
 7. **`annotate(...)` + `arrowprops` 在双轴（twin axis）上 bbox 会退化成上万像素** → 用 `text` + `scatter` 代替（已修）
 8. **公式标签**：图里不要塞 LaTeX 源码，先转成可读文本（`$p$` → `p`、`\times` → `×`、下标转 Unicode）再折行
-9. **标签里不要写 `#` 开头的"实体码/色号"**：`htmlLabels:false` 下 Mermaid 的实体码（`#35;`）与 HTML 数字实体（`&#35;`）
+9. **C4 / gitGraph 这类图型的自带布局会挤**：能出图但会告警，并打印一条针对性建议（缩短 description / 减少分支，或改用 `flowchart`+`subgraph` 复刻 C4 风格 —— arch 分类里有现成骨架）
+10. **标签里不要写 `#` 开头的"实体码/色号"**：`htmlLabels:false` 下 Mermaid 的实体码（`#35;`）与 HTML 数字实体（`&#35;`）
    **都不会被解码**，图上会原样显示成 `&#35;` / `&#EF4444` 这种噪音（真实踩过：ladder 样例把配色色号写进了标签）。
    想写 `#` 就直接写 `#`；要配色请用 `classDef` / `style`。渲染器会检测并给出提示（写进 `meta.warnings`）
-10. **量纲不同别共用一根轴**：用 `twin_axis` 或 `multi_subplot`；跨轴比"交点"没有意义（`twin_axis` 的 `mark_crossing` 默认关闭）
+11. **量纲不同别共用一根轴**：用 `twin_axis` 或 `multi_subplot`；跨轴比"交点"没有意义（`twin_axis` 的 `mark_crossing` 默认关闭）
 
 ## 依赖与安装
 
 | 用途 | 需要 | 安装 |
 |---|---|---|
 | **自检** | — | `python3 scripts/draw.py --doctor` |
-| B 类（数据图） | Python 3.8+ + `matplotlib` `numpy` | `python3 -m venv .venv && .venv/bin/pip install matplotlib numpy` |
+| B 类（数据图） | Python 3.8+ + `matplotlib` `numpy` | `python3 -m venv .venv && .venv/bin/pip install matplotlib numpy`；B 类也会**自动找一个带 matplotlib 的解释器**重跑（`FIGURE_MAKER_PYTHON` 指定、`--no-reexec` 关闭） |
 | `webp` 输出 | `Pillow`（含 libwebp） | `.venv/bin/pip install Pillow` |
 | A 类（结构图） | Node.js + Playwright Chromium | `npm i -g playwright && npx playwright install chromium`，并 `export PLAYWRIGHT_BROWSERS_PATH=<浏览器目录>` |
 | A 类运行时（mermaid） | **已内置** v11.17.2，无需安装 | `scripts/vendor/mermaid.min.js` |
@@ -188,9 +191,11 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 
 ## 当前状态
 
-- ✅ 91 个条目全部可用：24 个 Mermaid 图族 + 67 种数据图（含科研/生医/3D）
+- ✅ 93 个条目全部可用：25 个 Mermaid 图族 + 68 种数据图（含科研/生医/3D/泳道图）
 - ✅ 选型层：`--recommend` / `--list <分类>` / `--catalog --json` / `--example`
 - ✅ 73 个示例 spec + 73 张样例图（`specs/` 与 `docs/examples/`），`--batch --check` 全绿
 - ✅ A 类：标题不再裁切、退出码分级（渲染失败 vs 版式不过）、按图型分级阈值、软色板注入主题
 - ✅ B 类：`heatmap` 色阶按数据取值域、`twin_axis` 标签可配、`heatmap_panels` 面板标签生效、`bar` 兼容 `categories`
-- ⚠️ 未做：聚类热图的 dendrogram、泳道图、ZenUML（见 TYPES.md「不支持 / 有替代写法」）
+- ✅ 泳道图 `swimlane`（原生绘制）· 聚类热图 `dendrogram: true`（行列层次聚类树）
+- ✅ A 类：越界自动扩画布、零尺寸文本不再误报、不支持图型给出替代骨架（退出码 4）
+- ⚠️ 已知边界：C4/gitGraph 的 Mermaid 自带布局仍可能重叠（会告警 + 给建议）；ZenUML 不内置（会直接给 `sequenceDiagram` 骨架）

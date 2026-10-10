@@ -177,8 +177,9 @@ def _layout_summary(checks):
     gap_min = checks.get('gapMin')
     gap_ok = (gap_min is None) or (gap is None) or (gap >= gap_min)
     n_overlap = cnt('overlap', 'overlapText')
-    n_out = cnt('outOfCanvas')
-    return {
+    fitted = checks.get('canvasFitted')
+    n_out = 0 if fitted else cnt('outOfCanvas')       # 自动扩画布后，越界内容已可见 → 不算红线
+    out = {
         'overlap': n_overlap,
         'outOfCanvas': n_out,
         'overflow': cnt('overflow'),
@@ -187,6 +188,10 @@ def _layout_summary(checks):
         'diagramType': checks.get('diagramType'),
         'passed': (n_overlap + n_out + cnt('overflow')) == 0 and gap_ok,
     }
+    if fitted:
+        out['canvasFitted'] = fitted
+        out['outOfCanvasBeforeFit'] = cnt('outOfCanvas')
+    return out
 
 
 def _image_size(path, fmt):
@@ -279,7 +284,12 @@ def render_a(spec, out):
         cmd += ['--curve', str(spec['curve'])]
     if spec.get('background') is False:
         cmd += ['--bg', '0']
+    if spec.get('autofit') is False:
+        cmd += ['--autofit', '0']
     r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode == 4:
+        sys.stderr.write(r.stderr or '')
+        raise SystemExit('A 类不支持该图型（见上面的替代写法）')
     if r.returncode not in (0, 1):
         sys.stderr.write((r.stdout or '') + (r.stderr or ''))
         raise SystemExit('A 类渲染失败（Mermaid 解析/渲染错误；检查 Node 与 Playwright 是否可用）')
@@ -310,6 +320,60 @@ def render_a(spec, out):
             raise SystemExit('输出 webp 需要 Pillow：pip install Pillow')
         Image.open(png_path).convert('RGB').save(out, 'WEBP', quality=95, method=6)
     return checks
+
+
+def _has_matplotlib(py):
+    try:
+        r = subprocess.run([py, '-c', 'import matplotlib, numpy'], capture_output=True, text=True, timeout=60)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def _find_python_with_matplotlib():
+    """当前解释器没有 matplotlib 时，找一个装了的（skill 内 .venv / DSH 运行时 / 常见路径 / python3.x）。"""
+    import glob as _g, shutil as _sh
+    cands = []
+    if os.environ.get('FIGURE_MAKER_PYTHON'):
+        cands.append(os.environ['FIGURE_MAKER_PYTHON'])
+    cands.append(os.path.join(SKILL, '.venv', 'bin', 'python'))
+    for name in ('python3.13', 'python3.12', 'python3.11', 'python3.10', 'python3'):
+        p = _sh.which(name)
+        if p:
+            cands.append(p)
+    cands += ['/opt/homebrew/bin/python3', '/usr/local/bin/python3',
+              os.path.expanduser('~/miniconda3/bin/python'), os.path.expanduser('~/anaconda3/bin/python')]
+    cands += sorted(_g.glob(os.path.expanduser('~/.dsh/dsh-runtimes/*/dependencies/python/bin/python3')))
+    seen = set()
+    for c in cands:
+        if not c or c in seen or not os.path.exists(c):
+            continue
+        seen.add(c)
+        try:
+            if os.path.realpath(c) == os.path.realpath(sys.executable):
+                continue
+        except OSError:
+            pass
+        if _has_matplotlib(c):
+            return c
+    return None
+
+
+def _maybe_reexec():
+    """B 类需要 matplotlib：当前解释器没有时自动换一个装了的重跑（幂等，可用 --no-reexec 关）。"""
+    if os.environ.get('FIGURE_MAKER_REEXEC') == '1' or os.environ.get('FIGURE_MAKER_NO_REEXEC') == '1':
+        return
+    try:
+        import matplotlib  # noqa: F401
+        return
+    except ImportError:
+        pass
+    py = _find_python_with_matplotlib()
+    if not py:
+        return
+    sys.stderr.write('ℹ️  当前解释器（%s）没有 matplotlib，改用：%s\n' % (sys.executable, py))
+    env = dict(os.environ, FIGURE_MAKER_REEXEC='1')
+    os.execve(py, [py, os.path.abspath(__file__)] + sys.argv[1:], env)
 
 
 def render_b(spec, out):
@@ -364,9 +428,11 @@ def _quick_ok(checks):
     """检查结果是否全绿（两类图型同一口径；gapMin 为 None 表示该图型不套间距红线）。"""
     if not isinstance(checks, dict):
         return True
-    for k in ('overlap', 'overlapText', 'overflow', 'outOfCanvas'):
+    for k in ('overlap', 'overlapText', 'overflow'):
         if checks.get(k):
             return False
+    if checks.get('outOfCanvas') and not checks.get('canvasFitted'):
+        return False
     gap = (checks.get('nodeGap') or {}).get('min')
     gap_min = checks.get('gapMin')
     if gap_min is not None and gap is not None and gap < gap_min:
@@ -394,10 +460,30 @@ def main():
     ap.add_argument('--recommend', metavar='DESC', help='按一句描述推荐图型并给出可跑骨架')
     ap.add_argument('--catalog', action='store_true', help='打印图型目录（配 --json 输出机器可读目录）')
     ap.add_argument('--json', action='store_true', help='配合 --catalog 使用：输出 JSON')
+    ap.add_argument('--no-reexec', action='store_true', help='B 类缺少 matplotlib 时不要自动换解释器')
     ap.add_argument('--doctor', action='store_true', help='自检依赖环境')
     ap.add_argument('--example', metavar='TYPE')
     ap.add_argument('--batch', metavar='DIR', help='批量：画出该目录下所有 *.json spec')
     a = ap.parse_args()
+
+    if a.no_reexec:
+        os.environ['FIGURE_MAKER_NO_REEXEC'] = '1'
+    # B 类才需要 matplotlib：先看一眼 spec 的 type，需要且当前解释器没有就换个解释器重跑
+    _need_types = []
+    if a.spec and os.path.exists(a.spec):
+        try:
+            _need_types.append(json.load(open(a.spec, encoding='utf-8')).get('type'))
+        except Exception:
+            pass
+    elif a.batch:
+        import glob as _g
+        for _f in _g.glob(os.path.join(a.batch, '*.json')):
+            try:
+                _need_types.append(json.load(open(_f, encoding='utf-8')).get('type'))
+            except Exception:
+                pass
+    if any(t and t not in A_TYPES for t in _need_types):
+        _maybe_reexec()
 
     if a.doctor:
         return do_doctor()
