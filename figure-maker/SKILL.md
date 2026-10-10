@@ -134,11 +134,20 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
   置空 —— 否则 Matplotlib 会写入 `<dc:date>当前时间</dc:date>`、并给元素 id 加随机后缀
   （`id="m406f77eea2"`），同一 spec 每次的字节都不同，git diff / CI 全是噪音。
 - **A 类（Mermaid）多数逐字节一致，7 个图型例外**：实测连续两次重生成 97 张样例，
-  **91 张字节相同**；`architecture-beta` `classDiagram` `erDiagram` `flowchart_c4` `gitGraph`
+  **90 张字节相同**（B 类 **69/69** 全稳）；`architecture-beta` `classDiagram` `erDiagram` `flowchart_c4` `gitGraph`
   `requirementDiagram` `stateDiagram-v2` 这几张的**个别贝塞尔控制点**会浮动
   （端点、元素 id、整体布局都不变，肉眼无差别），根因在 Mermaid 内部的曲线采样。
   渲染前已 `await document.fonts.ready`，字体不是原因；`curve` 设 basis 或 linear 都一样。
+- **⚠️ "同一环境"里包含字体解析**：这条比坐标漂移更严重 —— 换一台机器/换一个 matplotlib 版本时，
+  若中文字体解析结果变了，**不是"路径坐标整体微移、肉眼无差别"，而是中文直接变豆腐块 □**
+  （实测：同一个 `PingFang.ttc`，matplotlib 3.11 注册出 `PingFang SC`、3.10 只注册出 `PingFang HK`，
+  于是整库 69 张数据图从"中文正常"变成"全变方框"）。现在①`scripts/fonts.py` 有多平台兜底家族，
+  ②`axes.unicode_minus=False` 让负号不依赖字体，③缺字形**算红线**：`--doctor` 会报实际生效的家族，
+  `--check` / `build_examples.py` 会拦下来
 - 结论：**要逐字节 diff，别把 `docs/examples/` 里那 7 张当基线**；要稳定的回归基线看 `meta.layout` 与 `--check`。
+  另外 `gantt` 还有一类**时间性**漂移：它的 `today` 线按**墙上时钟**定位（实测约 0.4 px/分钟），
+  所以跨较长时间重生成时该值会变 —— 采样日期与"今天"相差很远时这条线落在画布外、被裁掉，
+  **肉眼无差别**；真需要字节级基线就给该 spec 写 `todayMarker off`（本次两轮比对间隔数分钟，故未触发）
 
 ## 输出格式
 
@@ -158,7 +167,13 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
   `ROLES` 把语义角色（`attention` `ffn` `norm` `embedding` `project` `output` `block`）映射到色槽。**≤4 个语义色**，同义同色；顺序色图由 `_soft_cmap` 从同一色板生成
 - **改配色只需改一处**：A 类（Mermaid）主题由 `style.palette_payload()` 经 `--palette` 注入 `themeVariables`，所以改 `_PAPER_TINT`（或 `_shade` 的 `l_factor`，越小越深）后**两类图一起变**，改完记得跑 `build_examples.py` 重生成样例
 - **无阴影、无渐变**；去掉上/右边框；网格是**极浅虚线**；背景纯白
-- **字体**：系统无衬线（`PingFang SC` / `Noto Sans SC` / `Microsoft YaHei`）；字号下限 9px
+- **字体**：系统无衬线，家族列表**唯一来源是 `scripts/fonts.py`**（纯数据 + 标准库），顺序是
+  `Noto Sans SC`（Linux）→ `PingFang SC`（macOS）→ `Microsoft YaHei`（Windows）→ `Arial Unicode MS` →
+  `Hiragino Sans GB` → `PingFang HK` → …。**顺序就是"中文会不会变豆腐块"的开关**：matplotlib 只取
+  「列表里第一个能解析到的家族」且**不做逐字符回退**，所以 CJK 家族必须排在 `Arial` / `DejaVu Sans` 之前。
+  字号下限 9px。用 `--doctor` 可自检实际生效的家族；`FIGURE_MAKER_FONT="<家族名>"` 可临时指定
+- **负号用 ASCII `-`**（`axes.unicode_minus: False`）：matplotlib 默认拿 U+2212 画负号，而很多中文字体
+  没有那个字形 —— 实测 Hiragino Sans GB / Songti SC 都缺，会让每个负刻度变成豆腐块（全库 21 张图踩过）
 - **A 类**：`htmlLabels: false`（部分渲染环境不支持 foreignObject）、曲线默认平滑 `basis`、
   软色板已注入 `themeVariables`（时序图/ER/类图/甘特/饼图也有统一配色）；`classDef` **不要命名为 `root`**（与 Mermaid 容器类撞名会让所有路径被填充，渲染器已额外兜底清除）
 - **A 类 SVG 自带白底**（`<rect id="fig-background">`）：规范要求背景纯白，也避免图被贴到深色主题页面时"整张看不见"
@@ -170,13 +185,17 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 |---|---|---|
 | 文字重叠 | **0** | `--check`（像素空间比较；已过滤 1×1 占位文本、轴外刻度、隐藏轴、3D 退化对象） |
 | 文字越界（出画布） | **0** | 同上；右缘 x 与 y 都要看 |
+| **缺字形（豆腐块）** | **0** | 逐字符比对**实际生效字体**的 cmap（`missing_glyphs()`：走 `findfont` 同一条解析路径，能识别"码位在但指向 notdef"）。**算红线**：不加 `--check` 也会明确打印 ❌ 与三种解法；`--check` 下退出码 1；`build_examples.py` 会把它算成生成失败 |
 | A 类节点间距 | **按图型分级**：flowchart ≥20px；状态/类/ER/需求图 ≥12px；其它图型不套用 | 渲染器内部判定，结果写进 meta 的 `layout.gapMin/nodeGap` |
 | A 类内容越界 | 0（否则**自动扩画布**兜底，扩了多少记在 `layout.canvasFitted`） | 自动；`autofit: false` 可关 |
 | A 类画布留白 | 按**可见内容**居中（左右留白对称） | 渲染器内部：不信 Mermaid viewBox 的留白（实测左右不对称）+ 过滤 0×0 占位、不绘制的空矩形、以及 viewBox 外的离群元素（如 gantt 的 today 线） |
 | 长标签折行 | 无"标点开头/结尾"的丑折行；手写 `<br/>` 各行视觉宽度不得悬殊（最短 ≥ 最长×0.45，首行除外） | 目视；渲染器按视觉宽度自动检测，结果写进 `meta.warnings` |
 
 **检查语义**：默认**只告警不拦截**（结果写进 `meta.layout`，stdout 打印「通过 / 有告警」）；
-加 `--check` 才当红线（不过关退出码 1）。A 类渲染器的退出码约定：`0` 全绿 / `1` 已出图但版式不过 / `2` 用法错误 / `3` 渲染失败。
+加 `--check` 才当红线（不过关退出码 1）。**例外是「缺字形」**：缺字形的文字会画成豆腐块 □，
+版式上既不重叠也不越界、肉眼极易漏看（实测整库 69 张数据图的中文全变方框，而当时的检查照样"全绿"），
+所以它**直接算红线**（不加 `--check` 也打印 ❌ 并给出三种解法）。A 类渲染器的退出码约定：
+`0` 全绿 / `1` 已出图但版式不过 / `2` 用法错误 / `3` 渲染失败。
 
 ## 常见的坑（都踩过，照着避）
 
@@ -197,6 +216,14 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
     - **英文标签**：不要手写 `<br/>`，交给自动换行，行宽自然均衡（真实踩过：`a__flow` 逐步 `<br/>` 断成 8 行，节点又高又窄、短行悬在框中央）；
     - **中文标签**没有空格、**必须**手写 `<br/>`，但要**断在词 / 短语边界**（真实踩过：`a__graph` 把「用户-物品交互矩阵」断成「用户-」+「物品交互矩阵」，把「物品」劈开了），并让各行视觉宽度接近。
     渲染器会按视觉宽度（全角记 2）检测"长短悬殊"并给提示（写进 `meta.warnings`），首行不参与判定（短首行当小标题是合理写法）
+13. **B 类中文/符号画成方框（豆腐块 □）**：这是**字体解析**问题，不是排版问题 ——
+    - **负号**：matplotlib 默认用 U+2212 画负号，很多中文字体没这个字形 → 每个负刻度都变方框。
+      已在 `style.py` 关掉（`axes.unicode_minus: False`，改用 ASCII `-`），**不要**再打开
+    - **中文**：家族列表只取「第一个能解析到的家族」且不做逐字符回退。若列表里前几个中文家族本机都没有，
+      就会落到 `Arial` 上 → 中文全变方框。列表在 `scripts/fonts.py`；顺序不要改坏
+    - **同一个字体文件在不同 matplotlib 版本下可能注册成不同家族名**（实测 `PingFang.ttc`：3.11 认 `PingFang SC`、3.10 只认 `PingFang HK`），所以"昨天还好好的，今天全变方框"很正常
+    - 排查：`--doctor` 看**实际生效的家族**与缺哪些字形；应急：`FIGURE_MAKER_FONT="<家族名>"`；
+      根治：装 `Noto Sans SC`。**缺字形现在算红线**（`--check` 退出码 1、`build_examples.py` 判失败），不会再让你把豆腐块提交进仓库
 
 ## 依赖与安装
 
@@ -204,6 +231,7 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 |---|---|---|
 | **自检** | — | `python3 scripts/draw.py --doctor` |
 | B 类（数据图） | Python 3.8+ + `matplotlib` `numpy` | `python3 -m venv .venv && .venv/bin/pip install matplotlib numpy`；B 类也会**自动找一个带 matplotlib 的解释器**重跑（`FIGURE_MAKER_PYTHON` 指定、`--no-reexec` 关闭） |
+| B 类中文显示 | 任一含简体中文字形的系统字体 | 通常系统自带；`--doctor` 会报告**实际生效的家族**（`scripts/fonts.py` 里的顺序决定），缺字形时给两种解法：装 `Noto Sans SC`，或 `FIGURE_MAKER_FONT="<家族名>"` 临时指定 |
 | `webp` 输出 | `Pillow`（含 libwebp） | `.venv/bin/pip install Pillow` |
 | A 类（结构图） | Node.js + Playwright Chromium | `npm i -g playwright && npx playwright install chromium`，并 `export PLAYWRIGHT_BROWSERS_PATH=<浏览器目录>` |
 | A 类运行时（mermaid） | **已内置** v11.17.2，无需安装 | `scripts/vendor/mermaid.min.js` |
@@ -216,9 +244,9 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 |---|---|
 | 加/改图型 | 在 `scripts/drawers.py` 加 `draw_<name>()` 并登记到 `DRAWERS`；在 `scripts/catalog.py` 的 `B_TYPES` 里补一行（分类/场景/关键词/示例）|
 | 加 A 类图族 | 在 `catalog.py` 的 `A_FAMILIES` 里加一行（含起手骨架，用 `--recommend` 直接给用户） |
-| 重生成样例 | `python3 scripts/build_examples.py`（写 `docs/examples/*.svg`） |
-| 改配色 | 改 `scripts/style.py` 的 `_PAPER_TINT`（或 `_shade` 的 `l_factor`）→ 两类图一起变；然后重生成样例与文档 |
-| 重生成样例 | ⚠️ 与代码改动**分开提交**：样例与运行环境绑定，本地重生成会让 90+ 张 SVG 的坐标整体微移（非功能变更，评审时跳过） |
+| 改配色 | 改 `scripts/palette.py` 的 `_PAPER_TINT`（或 `shade` 的 `l_factor`）→ 两类图一起变；然后重生成样例与文档 |
+| 改字体 | 改 `scripts/fonts.py` 的 `FONT_FAMILIES`（顺序 = 优先级；CJK 家族必须在 `Arial` 之前）；改完跑 `--doctor` + 全量 `--check` 并重生成样例会变 |
+| 重生成样例 | `python3 scripts/build_examples.py`（写 `docs/examples/*.svg`）。⚠️ **与代码改动分开提交**：样例与运行环境（matplotlib 版本 + 字体解析）绑定，本地重生成会让 90+ 张 SVG 的坐标整体微移，非功能变更，评审可跳过。缺字形会让它**退出码 1**（不再静默产出豆腐块） |
 | 重生成文档 | `python3 scripts/build_docs.py`（写 `TYPES.md` + 刷新 `README.md` 画廊）。⚠️ 改过 `catalog.py`（分类/关键词/示例）后**必须重跑**，否则生成类文档会与代码漂移 |
 | 回归自测 | `python3 scripts/draw.py --batch specs/ --check`（97 个示例 spec 应全绿；`specs/templates/` 不在批量范围内） |
 | 文档漂移自检 | `python3 scripts/draw.py --check-docs`（比对 TYPES.md / README.md 与 `catalog.py`，不一致退出码 1；`--doctor` 里也会报） |
@@ -234,4 +262,9 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 - ✅ B 类：`heatmap` 色阶按数据取值域、`twin_axis` 标签可配、`heatmap_panels` 面板标签生效、`bar` 兼容 `categories`
 - ✅ 泳道图 `swimlane`（原生绘制）· 聚类热图 `dendrogram: true`（行列层次聚类树）
 - ✅ A 类：越界自动扩画布、零尺寸文本不再误报、不支持图型给出替代骨架（退出码 4）
-- ⚠️ 已知边界：C4/gitGraph 的 Mermaid 自带布局仍可能重叠（会告警 + 给建议）；ZenUML 不内置（会直接给 `sequenceDiagram` 骨架）
+- ✅ **字体**：家族列表收拢到 `scripts/fonts.py`（多平台兜底，顺序按对真实语料 562 字符的覆盖度实测排序）；
+  `axes.unicode_minus=False` 让负号不依赖字体；**缺字形算红线**（`--check` / `build_examples.py` 判负）；
+  `--doctor` 新增「中文字体」自检（报实际生效的家族 + 缺哪些字形）；`FIGURE_MAKER_FONT` 可临时指定
+- ✅ 97 张样例已按当前环境（matplotlib 3.10.7 + `Arial Unicode MS`）重生成，`--batch --check` 97/97 全绿
+- ⚠️ 已知边界：C4/gitGraph 的 Mermaid 自带布局仍可能重叠（会告警 + 给建议）；ZenUML 不内置（会直接给 `sequenceDiagram` 骨架）；
+  个别 spec 文本用到 `² ŷ ₁ ₂` 这类符号，**换到字形覆盖不足的字体时会触发缺字形红线**（这是有意为之：宁可按红线报错，也不静默出方框）

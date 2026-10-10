@@ -24,6 +24,12 @@ from matplotlib.text import Text
 from palette import (AXIS_EDGE, EDGE_SOFT, FILL, GRID, INK, PAPER, ROLES, SOFT_COLORS,  # noqa: F401
                      STROKE, _PAPER_TINT, shade as _shade)                              # noqa: F401
 
+# ---- 字体家族：**唯一来源在 fonts.py**（纯数据 + 标准库，无 matplotlib 依赖）----
+# 见 fonts.py 顶部说明：matplotlib 只取「列表里第一个能解析到的家族」且**不做逐字符回退**，
+# 所以"把 CJK 家族排在 Arial 之前"就是中文会不会变豆腐块的开关；
+# 列表抽出去是为了让 --doctor 在缺 matplotlib 时也能自检字体。
+from fonts import families as _font_families
+
 # 版面常量：所有 B 类图统一用「内容紧致 + 固定留白」保存，
 # 根治「贴边 / 太挤 / 一侧留白过大」（实测曾出现底部只剩 2px）。
 PAD_IN = 0.12          # 紧致留白（英寸）
@@ -63,7 +69,11 @@ LEGACY_COLOR_MAP = {
 def setup_soft_style():
     plt.rcParams.update({
         "font.family": "sans-serif",
-        "font.sans-serif": ["Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Arial"],
+        "font.sans-serif": _font_families(),
+        # 负号用 ASCII '-'，**不要**让 matplotlib 用 U+2212：那个字形很多中文字体没有
+        # （实测 Hiragino Sans GB / Songti SC 都缺），于是每个负刻度都画成豆腐块 □。
+        # 真实踩过：全库 21 张带负轴的图（cdf / normal_dist / gradient_descent …）负号全变方框。
+        "axes.unicode_minus": False,
         "font.size": 12,
         "figure.facecolor": PAPER,
         "axes.facecolor": PAPER,

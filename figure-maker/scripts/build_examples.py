@@ -52,13 +52,28 @@ def main():
         out = os.path.join(a.out, '%s.svg' % key)
         try:
             checks = D.render_a(spec, out) if t in D.A_TYPES else D.render_b(spec, out)
+            # 缺字形 = 样例被写坏（中文/符号变成豆腐块 □），必须算**失败**，不能只算"告警"：
+            # 真实踩过：本机 matplotlib 解析不到中文字体，整库 69 张数据图的中文全变方框，
+            # 而这里照样打印 ✅、报「告警 0，失败 0」、退出码 0 —— 静默产出损坏样例。
+            glyph = (checks or {}).get('missingGlyphs') or {} if isinstance(checks, dict) else {}
             good = D._quick_ok(checks)
+            if glyph:
+                print('❌ %-24s 缺字形（画出来是豆腐块 □）：%s'
+                      % (t, '；'.join('%s → %s' % (k, ''.join(v)) for k, v in list(glyph.items())[:3])))
+                print('   → 本机缺中文字体。装 Noto Sans SC，或用 '
+                      'FIGURE_MAKER_FONT="Hiragino Sans GB" 指定家族名后重跑 '
+                      '（python3 scripts/draw.py --doctor 可自检）')
+                bad += 1
+                continue
             warn += 0 if good else 1
             print('%s %-24s → %s' % ('✅' if good else '⚠️ ', t, os.path.relpath(out, SKILL)))
             ok += 1
         except SystemExit as e:
             print('❌ %-24s %s' % (t, e)); bad += 1
-    print('\n生成 %d 张（告警 %d，失败 %d）' % (ok, warn, bad))
+    print('\n生成 %d 张（不通过 %d，失败 %d）' % (ok, warn, bad))
+    if bad:
+        print('⚠️ 有样例生成失败/被写坏 —— 失败项对应的 <名字>.svg 可能是损坏文件，'
+              '修好环境后重跑；不要把损坏样例提交进仓库。')
     return 1 if bad else 0
 
 

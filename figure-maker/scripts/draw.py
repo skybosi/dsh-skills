@@ -190,8 +190,12 @@ def _layout_summary(checks):
     fitted = checks.get('canvasFitted')
     bad_glyph = checks.get('missingGlyphs') or {}
     if bad_glyph:
-        print('⚠️  字形缺失（会画成豆腐块，换字体里有的字符）：%s'
-              % '；'.join('%s → %s' % (k, ''.join(v)) for k, v in list(bad_glyph.items())[:3]))
+        print('❌ 字形缺失（会画成豆腐块 □）：%s' % '；'.join(
+            '%s → %s' % (k, ''.join(v)) for k, v in list(bad_glyph.items())[:3]))
+        print('   本机用于绘图的字体解析不到这些字符。三种解法：')
+        print('   1) 装一个中文字体（推荐 Noto Sans SC）：python3 scripts/draw.py --doctor 会给出建议')
+        print('   2) 指定家族名：FIGURE_MAKER_FONT="Hiragino Sans GB" python3 scripts/draw.py ...')
+        print('   3) 换掉这些字符（例如把全角括号/特殊符号改成 ASCII）')
     n_out = 0 if fitted else cnt('outOfCanvas')       # 自动扩画布后，越界内容已可见 → 不算红线
     out = {
         'overlap': n_overlap,
@@ -438,6 +442,27 @@ def do_doctor():
     print('  Chromium 浏览器    %s' % ('见 PLAYWRIGHT_BROWSERS_PATH' if pw else '→ npx playwright install chromium'))
     print('  mermaid 运行时      %s' % ('已内置' if mermaid else '缺失'))
     print('  B 类图型数         %s' % ('%d 种' % len(bs) if bs is not None else '不可用（缺 matplotlib）'))
+    # 中文字体自检：缺字形会把中文画成豆腐块（渲染器能检出，但装机自检更该先拦住）
+    try:
+        import fonts as _fonts
+        p = _fonts.probe()
+        note = '（由 FIGURE_MAKER_FONT 指定）' if p['override'] else ''
+        if p['family'] and not p['missing']:
+            print('  中文字体           %s ✅%s' % (p['family'], note))
+        elif p['family']:
+            print('  中文字体           %s ❌ 缺中文字形：%s' % (p['family'], ''.join(p['missing'])))
+            print('                     → 该字体画不出中文，会变成豆腐块 □')
+            print('                     → 装 Noto Sans SC，或 FIGURE_MAKER_FONT=<某个含中文的家族名>')
+        else:
+            print('  中文字体           ❌ 列表里一个家族都解析不到')
+            print('                     → 装一个中文字体（推荐 Noto Sans SC）后重跑本自检')
+        if p['family'] and p['missing_extra']:
+            # 不误报成"字体不可用"：这些符号只在真用到它们的图里才成问题
+            print('  符号字形          ⚠️ %s 缺：%s' % (p['family'], ''.join(p['missing_extra'])))
+            print('                     → 只影响图里真用到这些符号的图（渲染器会报"字形缺失"）；'
+                  '可用 FIGURE_MAKER_FONT 换一个覆盖更全的字体')
+    except Exception as e:                      # 自检失败不该让 doctor 崩掉
+        print('  中文字体           ⚠️ 无法自检（%s）' % e)
     try:
         import build_docs
         drift = build_docs.check_docs()
@@ -453,12 +478,19 @@ def do_doctor():
 
 
 def _quick_ok(checks):
-    """检查结果是否全绿（两类图型同一口径；gapMin 为 None 表示该图型不套间距红线）。"""
+    """检查结果是否全绿（两类图型同一口径；gapMin 为 None 表示该图型不套间距红线）。
+
+    ⚠️ 「字形缺失」算**红线**：缺字形的字符会被画成豆腐块 □ —— 版式上既不重叠也不越界，
+    肉眼一扫还以为是排版问题，很容易蒙混过关（实测本机整库 69 张数据图的中文全变方框，
+    而当时的 _quick_ok 只看 overlap / outOfCanvas，--check 照样"全绿"）。
+    """
     if not isinstance(checks, dict):
         return True
     for k in ('overlap', 'overlapText', 'overflow'):
         if checks.get(k):
             return False
+    if checks.get('missingGlyphs'):
+        return False
     if checks.get('outOfCanvas') and not checks.get('canvasFitted'):
         return False
     gap = (checks.get('nodeGap') or {}).get('min')
@@ -553,7 +585,7 @@ def main():
                 if a.check and not good:
                     raise RuntimeError('版式检查未通过（见 %s）' % mp)
                 print('✅ %-40s %s (+ %s)%s' % (os.path.basename(sp), out, os.path.basename(mp),
-                                                '' if good else '  ⚠️ 版式有告警')); ok += 1
+                                                '' if good else '  ❌ 版式不通过（见上方提示）')); ok += 1
             except SystemExit as e:
                 print('❌ %-40s %s' % (os.path.basename(sp), e)); fail += 1
             except Exception as e:
@@ -570,7 +602,7 @@ def main():
     mp, ok, warns = _run_one(spec, out, check=a.check)
     print('✅ 图：%s' % out)
     print('   元信息：%s ｜ 版式检查：%s%s'
-          % (mp, '通过' if ok else '有告警（加 --check 可当红线）',
+          % (mp, '通过' if ok else '不通过（加 --check 时退出码 1；明细见 meta.layout）',
              '' if not warns else ' ｜ ⚠️ 渲染提示 %d 条（见 meta.warnings）' % len(warns)))
     if a.check and not ok:
         return 1
