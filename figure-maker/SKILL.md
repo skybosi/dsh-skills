@@ -144,6 +144,7 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 | `eps` `ps` `jpeg` `tiff` | 其它下游 | 仅 B 类 |
 
 ## 风格规范（保持一致才好看）
+- **逐字节一致是「同一环境内」的性质**：换成别的 matplotlib / 字体版本后，B 类样例的文本度量会变，进而**所有路径坐标整体微移**（实测同一 spec 在两台环境里 diff 上千行，肉眼无差别）。所以：仓库里的样例由固定环境生成；本地重生成会全库变动，**样例改动请与代码改动分开提交**。
 
 - **软色板（唯一来源是 `style.py`）**：`_PAPER_TINT`（论文原色：蓝 `#C2E8F7` / 绿 `#CCE7CF` / 橙 `#FFE2BB` / 紫 `#FCE0E1`）
   → `_shade(l_factor=0.84)` 派生出 `SOFT_COLORS`（更饱和，用于线 / 柱 / 标记 / A 类节点边框）；`FILL` / `STROKE` / `INK` 同源；
@@ -209,6 +210,7 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 | 加 A 类图族 | 在 `catalog.py` 的 `A_FAMILIES` 里加一行（含起手骨架，用 `--recommend` 直接给用户） |
 | 重生成样例 | `python3 scripts/build_examples.py`（写 `docs/examples/*.svg`） |
 | 改配色 | 改 `scripts/style.py` 的 `_PAPER_TINT`（或 `_shade` 的 `l_factor`）→ 两类图一起变；然后重生成样例与文档 |
+| 重生成样例 | ⚠️ 与代码改动**分开提交**：样例与运行环境绑定，本地重生成会让 90+ 张 SVG 的坐标整体微移（非功能变更，评审时跳过） |
 | 重生成文档 | `python3 scripts/build_docs.py`（写 `TYPES.md` + 刷新 `README.md` 画廊）。⚠️ 改过 `catalog.py`（分类/关键词/示例）后**必须重跑**，否则生成类文档会与代码漂移 |
 | 回归自测 | `python3 scripts/draw.py --batch specs/ --check`（98 个示例 spec 应全绿；`specs/templates/` 不在批量范围内） |
 | 文档漂移自检 | `python3 scripts/draw.py --check-docs`（比对 TYPES.md / README.md 与 `catalog.py`，不一致退出码 1；`--doctor` 里也会报） |
