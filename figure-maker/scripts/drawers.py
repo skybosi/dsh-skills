@@ -13,7 +13,8 @@ import math
 import numpy as np
 # ⚠️ 必须**先**导入 style：它在模块顶层设置 MPLCONFIGDIR（否则 matplotlib 会去写 ~/.matplotlib，
 #    在沙箱里直接报 “not a writable directory” 并退化到临时目录重建字体缓存）。
-from style import SOFT_COLORS, FILL, soft, new_fig, save, check_layout, report_and_exit, INK, role_colors
+from style import (SOFT_COLORS, FILL, soft, new_fig, save, check_layout, report_and_exit, INK,
+                   role_colors, PAPER, GRID, EDGE_SOFT)
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Rectangle, Polygon
 
@@ -45,11 +46,11 @@ def _soft_cmap(name="blue"):
     """连续软色板（白→浅→主色→深），色标**只用规范色板里的颜色**，不用 matplotlib 默认色图。"""
     from matplotlib.colors import LinearSegmentedColormap
     ramps = {
-        "blue":      ["#FFFFFF", FILL["category"], SOFT_COLORS["blue"], SOFT_COLORS["purple"]],
-        "warm":      ["#FFFFFF", FILL["warning"], SOFT_COLORS["orange"], SOFT_COLORS["red"]],
-        "green":     ["#FFFFFF", FILL["output"], SOFT_COLORS["green"], SOFT_COLORS["dark"]],
-        "grey":      ["#FFFFFF", FILL["leaf"], SOFT_COLORS["grey"], SOFT_COLORS["dark"]],
-        "diverging": [SOFT_COLORS["blue"], "#FFFFFF", SOFT_COLORS["orange"]],
+        "blue":      [PAPER, FILL["category"], SOFT_COLORS["blue"], SOFT_COLORS["purple"]],
+        "warm":      [PAPER, FILL["warning"], SOFT_COLORS["orange"], SOFT_COLORS["red"]],
+        "green":     [PAPER, FILL["output"], SOFT_COLORS["green"], SOFT_COLORS["dark"]],
+        "grey":      [PAPER, FILL["leaf"], SOFT_COLORS["grey"], SOFT_COLORS["dark"]],
+        "diverging": [SOFT_COLORS["blue"], PAPER, SOFT_COLORS["orange"]],
     }
     key = name if name in ramps else "blue"
     return LinearSegmentedColormap.from_list("soft_" + key, ramps[key])
@@ -80,7 +81,7 @@ def draw_multi_curve(p, out_path, width_in=8.0, height_in=4.5):
             xs = np.asarray(c.get("x", []), dtype=float); ys = np.asarray(c.get("y", []), dtype=float)
         ax.plot(xs, ys, color=color, linewidth=2.2, label=c.get("label", ""),
                 marker="o" if "x" in c and len(c.get("x", [])) <= 24 else None,
-                markersize=4.5, markerfacecolor="white", markeredgewidth=1.4)
+                markersize=4.5, markerfacecolor=PAPER, markeredgewidth=1.4)
     ax.set_title(p.get("title", ""), pad=12)
     ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
     n = len(p.get("curves", []))
@@ -101,7 +102,7 @@ def draw_loglog(p, out_path, width_in=8.0, height_in=4.5):
         else:
             xs = np.asarray(c.get("x", []), dtype=float); ys = np.asarray(c.get("y", []), dtype=float)
         ax.plot(xs, ys, color=color, linewidth=2.2, marker="o", markersize=4.5,
-                markerfacecolor="white", markeredgewidth=1.4, label=c.get("label", ""))
+                markerfacecolor=PAPER, markeredgewidth=1.4, label=c.get("label", ""))
     ax.set_xscale("log")
     ax.set_title(p.get("title", ""), pad=12)
     ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
@@ -147,7 +148,7 @@ def draw_twin_axis(p, out_path, width_in=8.0, height_in=4.5):
     ax2 = ax.twinx()
     ax2.spines["top"].set_visible(False)
     ax2.plot(lx, ly, color=SOFT_COLORS["red"], linewidth=2.2, marker="o", markersize=4.5,
-             markerfacecolor="white", markeredgewidth=1.4, label=line_label)
+             markerfacecolor=PAPER, markeredgewidth=1.4, label=line_label)
     ax2.set_ylabel(p.get("ylabel_right") or line_label, color=INK["axis"])
     ax2.grid(False)
 
@@ -205,12 +206,12 @@ def draw_heatmap(p, out_path, width_in=8.0, height_in=4.5):
     ax.grid(False)
     ax.set_xticks(np.arange(-0.5, data.shape[1], 1), minor=True)
     ax.set_yticks(np.arange(-0.5, data.shape[0], 1), minor=True)
-    ax.grid(which="minor", color="#FFFFFF", linewidth=1.6)
+    ax.grid(which="minor", color=PAPER, linewidth=1.6)
     ax.tick_params(which="minor", length=0)
     if p.get("colorbar"):
         cb = fig.colorbar(im, ax=ax, shrink=0.9, pad=0.02)
         cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=11)
-        cb.outline.set_edgecolor("#E2E8F0")
+        cb.outline.set_edgecolor(EDGE_SOFT)
     return _finish(fig, out_path)
 
 
@@ -242,7 +243,7 @@ def draw_grouped_bar(p, out_path, width_in=8.0, height_in=4.5):
         for k, (xi, v) in enumerate(zip(pos, vals)):
             if _long_cats and float(v) > 0:
                 ax.text(xi, float(v) - vmax * 0.03, ("%.2f" % v).rstrip("0").rstrip("."),
-                        ha="center", va="top", fontsize=9, color="#FFFFFF", zorder=4)
+                        ha="center", va="top", fontsize=9, color=PAPER, zorder=4)
                 continue
             if dense:
                 # 每个类目只标最大的一根（其余省略）
@@ -373,7 +374,7 @@ def _labels_on_bars(ax, xs, vals, fmt="%.2f", thresh=12, cats_hint=None, force_i
             continue                                              # 整句标签不画在柱上（会压刻度）
         if (long_cats and float(v) > span * 0.22) or (force_inside and float(v) > span * 0.16):
             ax.text(x, float(v) - span * 0.03, (fmt % v).rstrip("0").rstrip("."), ha="center",
-                    va="top", fontsize=9.5, color="#FFFFFF", zorder=4)
+                    va="top", fontsize=9.5, color=PAPER, zorder=4)
             continue
         y = min(max(v + (span * 0.03 if up else -span * 0.03), lo - span * 0.02), hi + span * 0.02)
         ax.text(x, y, (fmt % v).rstrip("0").rstrip("."), ha="center",
@@ -411,11 +412,11 @@ def draw_matrix(p, out_path, width_in=8.0, height_in=4.5):
                    colWidths=colw, loc="upper center", bbox=[0.0, 0.06, 1.0, 0.86])
     tbl.auto_set_font_size(False); tbl.set_fontsize(10.5)
     for (r, c), cell in tbl.get_celld().items():
-        cell.set_edgecolor("#E2E8F0"); cell.set_linewidth(0.8)
+        cell.set_edgecolor(EDGE_SOFT); cell.set_linewidth(0.8)
         if r == 0:
             cell.set_facecolor(SOFT_COLORS["blue"]); cell.set_text_props(color=INK["text"], weight="bold")
         else:
-            cell.set_facecolor("#FFFFFF" if r % 2 else FILL["neutral"])
+            cell.set_facecolor(PAPER if r % 2 else FILL["neutral"])
     ax.set_title(p.get("title", ""), pad=10)
     return _finish(fig, out_path)
 
@@ -468,7 +469,7 @@ def draw_normal_dist(p, out_path, width_in=8.0, height_in=4.5):
 def draw_scatter_fit(p, out_path, width_in=8.0, height_in=4.5):
     fig, ax = new_fig(width_in, height_in)
     xs = np.asarray(p.get("x", []), dtype=float); ys = np.asarray(p.get("y", []), dtype=float)
-    ax.scatter(xs, ys, s=42, color=SOFT_COLORS["blue"], edgecolor="white", linewidth=0.8, zorder=3, label="样本")
+    ax.scatter(xs, ys, s=42, color=SOFT_COLORS["blue"], edgecolor=PAPER, linewidth=0.8, zorder=3, label="样本")
     k = float(p.get("slope", 1)); b = float(p.get("intercept", 0))
     gx = np.linspace(xs.min(), xs.max(), 50)
     ax.plot(gx, k * gx + b, color=SOFT_COLORS["red"], linewidth=2.2, label="拟合 y=%.3gx+%.3g" % (k, b))
@@ -485,7 +486,7 @@ def draw_roc(p, out_path, width_in=8.0, height_in=4.5):
     fpr = np.asarray(p.get("fpr", []), dtype=float); tpr = np.asarray(p.get("tpr", []), dtype=float)
     ax.plot([0, 1], [0, 1], linestyle="--", color=SOFT_COLORS["grey"], linewidth=1.4, label="随机猜测")
     ax.plot(fpr, tpr, color=SOFT_COLORS["blue"], linewidth=2.4, marker="o", markersize=4.5,
-            markerfacecolor="white", markeredgewidth=1.4, label="ROC（AUC=%.3g）" % float(p.get("auc", 0)))
+            markerfacecolor=PAPER, markeredgewidth=1.4, label="ROC（AUC=%.3g）" % float(p.get("auc", 0)))
     ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
     ax.set_xlim(-0.02, 1.02); ax.set_ylim(-0.02, 1.02)
     ax.set_title(p.get("title", ""), pad=12)
@@ -599,7 +600,7 @@ def draw_scatter_boundary(p, out_path, width_in=8.0, height_in=4.5):
             if len(pt) < 3:
                 continue
             col = soft(pt[2])
-            ax.scatter(float(pt[0]), float(pt[1]), s=46, color=col, edgecolor="white", linewidth=0.8, zorder=3)
+            ax.scatter(float(pt[0]), float(pt[1]), s=46, color=col, edgecolor=PAPER, linewidth=0.8, zorder=3)
         b = pn.get("boundary") or {}
         # 兼容两种写法：{x:[…], y:[…]}（推荐）或 [x0, y0, x1, y1]（两点式）。
         # ⚠️ 以前只认字典 → 传列表会被**静默忽略**：图上看不到边界线，而布局检查仍然"通过"。
@@ -625,10 +626,10 @@ def draw_scatter_classes(p, out_path, width_in=8.0, height_in=4.5):
         col = soft(c.get("color"))
         xs = [float(v) for v in c.get("x", [])]; ys = [float(v) for v in c.get("y", [])]
         allx += xs; ally += ys
-        ax.scatter(xs, ys, s=46, color=col, edgecolor="white", linewidth=0.8, label=c.get("label", ""), zorder=3)
+        ax.scatter(xs, ys, s=46, color=col, edgecolor=PAPER, linewidth=0.8, label=c.get("label", ""), zorder=3)
     for c in p.get("centers", []):
         ax.scatter([float(c["x"])], [float(c["y"])], marker="*", s=240, color=SOFT_COLORS["red"],
-                   edgecolor="white", linewidth=1, zorder=4, label="中心")
+                   edgecolor=PAPER, linewidth=1, zorder=4, label="中心")
     # 参数跨度超过两个数量级 → 用对数轴（C/gamma 网格这类图）
     if allx and max(allx) / max(1e-9, min(allx)) > 100:
         ax.set_xscale("log")
@@ -647,7 +648,7 @@ def draw_fit_comparison(p, out_path, width_in=8.0, height_in=4.5):
     for i, pn in enumerate(panels):
         ax = axes[0][i]
         sx = [float(v) for v in pn.get("scatter_x", [])]; sy = [float(v) for v in pn.get("scatter_y", [])]
-        ax.scatter(sx, sy, s=40, color=SOFT_COLORS["blue"], edgecolor="white", linewidth=0.8, zorder=3)
+        ax.scatter(sx, sy, s=40, color=SOFT_COLORS["blue"], edgecolor=PAPER, linewidth=0.8, zorder=3)
         if pn.get("curve_func") and sx:
             gx = np.linspace(min(sx), max(sx), 200)
             ax.plot(gx, _eval_func(pn["curve_func"], gx), color=SOFT_COLORS["red"], linewidth=2.0, zorder=2)
@@ -690,7 +691,7 @@ def draw_heatmap_panels(p, out_path, width_in=8.0, height_in=4.5):
         fig.tight_layout(rect=[0, 0.03, 0.84, 0.93], w_pad=1.8)     # 给色条留出右侧空间（实测需更大）
         cb = fig.colorbar(last, ax=axes.ravel().tolist(), shrink=0.85, pad=0.03)
         cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=11)
-        cb.outline.set_edgecolor("#E2E8F0")
+        cb.outline.set_edgecolor(EDGE_SOFT)
     _suptitle(fig, p.get("title", ""))
     return _finish(fig, out_path)
 
@@ -708,11 +709,11 @@ def _mlp(ax, layers, labels, title):
     for li in range(n - 1):
         for (x1, y1) in pos[li]:
             for (x2, y2) in pos[li + 1]:
-                ax.plot([x1, x2], [y1, y2], color="#E2E8F0", linewidth=0.9, zorder=1)
+                ax.plot([x1, x2], [y1, y2], color=EDGE_SOFT, linewidth=0.9, zorder=1)
     for li, layer in enumerate(pos):
         col = [SOFT_COLORS["orange"], SOFT_COLORS["blue"], SOFT_COLORS["green"]][li % 3]
         for (x, y) in layer:
-            ax.add_patch(Circle((x, y), 0.030, facecolor=col, edgecolor="white", linewidth=1.1, zorder=3))
+            ax.add_patch(Circle((x, y), 0.030, facecolor=col, edgecolor=PAPER, linewidth=1.1, zorder=3))
         if li < len(labels):
             lab = str(labels[li]).replace("\n", " ")
             lab = lab if len(lab) <= 6 else lab[:6] + "\n" + lab[6:12]      # 手动折行，避免横向互压
@@ -744,10 +745,10 @@ def draw_scatter_panels(p, out_path, width_in=8.0, height_in=4.5):
             cnt = int(cl.get("n", 20)); cx = float(cl.get("cx", 0)); cy = float(cl.get("cy", 0))
             sp = float(cl.get("spread", 0.3)); col = soft(cl.get("color"))
             ax.scatter(rng.normal(cx, sp, cnt), rng.normal(cy, sp, cnt), s=26, color=col,
-                       alpha=0.85, edgecolor="white", linewidth=0.6)
+                       alpha=0.85, edgecolor=PAPER, linewidth=0.6)
         for c in pn.get("centers", []) or []:
             ax.scatter([float(c.get("x", c.get("cx")))], [float(c.get("y", c.get("cy")))],
-                       marker="*", s=200, color=SOFT_COLORS["red"], edgecolor="white", linewidth=1, zorder=4)
+                       marker="*", s=200, color=SOFT_COLORS["red"], edgecolor=PAPER, linewidth=1, zorder=4)
         ax.set_title(pn.get("title", ""), fontsize=11.5, pad=8)
         ax.set_xticks([]); ax.set_yticks([])
     for j in range(n, rows * ncols):
@@ -785,7 +786,7 @@ def draw_area_line(p, out_path, width_in=8.0, height_in=4.5):
     fig, ax = new_fig(width_in, height_in)
     xs = np.asarray(p.get("x", []), dtype=float); ys = np.asarray(p.get("y", []), dtype=float)
     ax.plot(xs, ys, color=SOFT_COLORS["blue"], linewidth=2.4, marker="o", markersize=5,
-            markerfacecolor="white", markeredgewidth=1.4)
+            markerfacecolor=PAPER, markeredgewidth=1.4)
     ax.fill_between(xs, ys, ys.min() if len(ys) else 0, color=SOFT_COLORS["blue"], alpha=0.22)
     ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
     ax.set_title(p.get("title", ""), pad=12)
@@ -799,7 +800,7 @@ def draw_roofline(p, out_path, width_in=8.0, height_in=4.5):
     ax.plot(xs, np.minimum(bw * xs, peak), color=SOFT_COLORS["purple"], linewidth=2.2, label="roofline")
     for i, pt in enumerate(p.get("points", [])):
         ax.scatter(float(pt.get("intensity", 1)), float(pt.get("flops", 1)), s=52,
-                   color=SOFT_COLORS["blue"], edgecolor="white", linewidth=0.9, zorder=3)
+                   color=SOFT_COLORS["blue"], edgecolor=PAPER, linewidth=0.9, zorder=3)
         # 对数轴上相邻点的标签很容易撞在一起 → 四向轮换 + 按方向对齐（原来只有上下两向）
         off = [(10, 16), (10, -30), (-10, 16), (-10, -30)][i % 4]   # 偏移要够大，对数轴上小偏移仍会压
         ax.annotate(pt.get("label", ""), (float(pt.get("intensity", 1)), float(pt.get("flops", 1))),
@@ -815,7 +816,7 @@ def draw_elbow(p, out_path, width_in=8.0, height_in=4.5):
     fig, ax = new_fig(width_in, height_in)
     ks = np.asarray(p.get("k", []), dtype=float); vs = np.asarray(p.get("values", []), dtype=float)
     ax.plot(ks, vs, color=SOFT_COLORS["blue"], linewidth=2.2, marker="o", markersize=5,
-            markerfacecolor="white", markeredgewidth=1.4)
+            markerfacecolor=PAPER, markeredgewidth=1.4)
     ek = p.get("elbow_k")
     if ek is not None and len(ks):
         i = int(np.argmin(np.abs(ks - float(ek))))
@@ -852,7 +853,7 @@ def draw_limit(p, out_path, width_in=8.0, height_in=4.5):
     xs = np.linspace(x0 - 2, x0 + 2, 400)
     ax.plot(xs, _eval_func(f, xs), color=SOFT_COLORS["blue"], linewidth=2.2)
     y0 = float(_eval_func(f, np.array([x0]))[0])
-    ax.scatter([x0], [y0], s=70, facecolor="white", edgecolor=SOFT_COLORS["red"], linewidth=2, zorder=4)
+    ax.scatter([x0], [y0], s=70, facecolor=PAPER, edgecolor=SOFT_COLORS["red"], linewidth=2, zorder=4)
     ax.annotate("x→%.4g 时 f(x)→%.4g" % (x0, y0), (x0, y0), textcoords="offset points",
                 xytext=(10, 12), fontsize=11, color=INK["axis"])
     ax.axvline(x0, color=SOFT_COLORS["grey"], linewidth=1, linestyle=":")
@@ -891,7 +892,7 @@ def draw_gradient_descent(p, out_path, width_in=8.0, height_in=4.5):
         x = x - 0.25 * 2 * x
         path.append(x)
     ax.plot(path, [v ** 2 for v in path], color=SOFT_COLORS["red"], linewidth=1.6,
-            marker="o", markersize=4.5, markerfacecolor="white")
+            marker="o", markersize=4.5, markerfacecolor=PAPER)
     ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
     ax.set_title(p.get("title", ""), pad=12); ax.legend(loc="upper center")
     return _finish(fig, out_path)
@@ -950,7 +951,7 @@ def draw_hist_fit(p, out_path, width_in=8.0, height_in=4.5):
     if not len(data):
         raise SystemExit("hist_fit 无 data")
     ax.hist(data, bins=int(p.get("bins", 30)), density=True, color=SOFT_COLORS["blue"],
-            edgecolor="white", linewidth=0.6, label="样本直方图")
+            edgecolor=PAPER, linewidth=0.6, label="样本直方图")
     xs = np.linspace(data.min(), data.max(), 300)
     ax.plot(xs, _eval_func(p.get("func", "1"), xs), color=SOFT_COLORS["red"], linewidth=2.2, label="拟合密度")
     ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
@@ -966,7 +967,7 @@ def draw_pie(p, out_path, width_in=8.0, height_in=4.5):
             SOFT_COLORS["red"], SOFT_COLORS["grey"]]
     ax.pie(vals, labels=labels, colors=cols[:len(vals)], autopct="%1.0f%%", startangle=90,
            textprops=dict(color=INK["text"], fontsize=11),
-           wedgeprops=dict(edgecolor="white", linewidth=1.4))
+           wedgeprops=dict(edgecolor=PAPER, linewidth=1.4))
     ax.set_title(p.get("title", ""), pad=12)
     return _finish(fig, out_path)
 
@@ -1025,7 +1026,7 @@ def draw_multi_panel_gd(p, out_path, width_in=8.0, height_in=4.5):
             x = x - lr * 2 * x
             path.append(max(-3.2, min(3.2, x)))
         ax.plot(path, [v ** 2 for v in path], color=SOFT_COLORS["red"], linewidth=1.6,
-                marker="o", markersize=4, markerfacecolor="white")
+                marker="o", markersize=4, markerfacecolor=PAPER)
         ax.set_title(pn.get("title", "lr=%g" % lr), fontsize=11.5, pad=8)
     _suptitle(fig, p.get("title", ""))
     return _finish(fig, out_path)
@@ -1039,7 +1040,7 @@ def draw_scatter_matrix(p, out_path, width_in=8.0, height_in=4.5):
         ax = axes[0][i]
         col = soft(pn.get("color"))
         ax.scatter([float(v) for v in pn.get("x", [])], [float(v) for v in pn.get("y", [])],
-                   s=34, color=col, edgecolor="white", linewidth=0.6, alpha=0.9)
+                   s=34, color=col, edgecolor=PAPER, linewidth=0.6, alpha=0.9)
         ax.set_title(pn.get("title", ""), fontsize=11.5, pad=8)
     _suptitle(fig, p.get("title", ""))
     return _finish(fig, out_path)
@@ -1052,7 +1053,7 @@ def draw_regularization_path(p, out_path, width_in=8.0, height_in=4.5):
     cols = [SOFT_COLORS["blue"], SOFT_COLORS["green"], SOFT_COLORS["orange"], SOFT_COLORS["purple"], SOFT_COLORS["red"]]
     for i in range(coefs.shape[0] if coefs.ndim == 2 else 0):
         ax.plot(alphas, coefs[i], color=cols[i % len(cols)], linewidth=2, marker="o", markersize=4,
-                markerfacecolor="white", label="系数 %d" % (i + 1))
+                markerfacecolor=PAPER, label="系数 %d" % (i + 1))
     ax.set_xscale("log")
     ax.set_xlabel(p.get("xlabel", "正则强度 α（对数轴）")); ax.set_ylabel(p.get("ylabel", "系数大小"))
     ax.set_title(p.get("title", ""), pad=12); ax.legend(loc="best", fontsize=10)
@@ -1063,10 +1064,10 @@ def draw_scatter_rich(p, out_path, width_in=8.0, height_in=4.5):
     fig, ax = new_fig(width_in, height_in)
     sc = ax.scatter([float(v) for v in p.get("x", [])], [float(v) for v in p.get("y", [])],
                     c=[float(v) for v in p.get("c", [])], s=[float(v) for v in p.get("s", [])] or 40,
-                    cmap="Blues", edgecolor="white", linewidth=0.6, alpha=0.92)
+                    cmap=_soft_cmap("blue"), edgecolor=PAPER, linewidth=0.6, alpha=0.92)
     cb = fig.colorbar(sc, ax=ax, shrink=0.9, pad=0.02)
     cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=11)
-    cb.outline.set_edgecolor("#E2E8F0")
+    cb.outline.set_edgecolor(EDGE_SOFT)
     ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
     ax.set_title(p.get("title", ""), pad=12)
     return _finish(fig, out_path)
@@ -1080,18 +1081,18 @@ def draw_tensor_blocks(p, out_path, width_in=8.0, height_in=4.5):
         ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
         ax.set_title(titles[i], fontsize=11.5, pad=6)
         if i == 0:
-            ax.add_patch(Circle((0.5, 0.5), 0.1, facecolor=SOFT_COLORS["blue"], edgecolor="white"))
+            ax.add_patch(Circle((0.5, 0.5), 0.1, facecolor=SOFT_COLORS["blue"], edgecolor=PAPER))
             ax.text(0.5, 0.3, "a", ha="center", fontsize=12, color=INK["text"])
         elif i == 1:
             for k in range(4):
                 ax.add_patch(Rectangle((0.1 + k * 0.2, 0.42), 0.16, 0.16,
-                                       facecolor=SOFT_COLORS["blue"], edgecolor="white"))
+                                       facecolor=SOFT_COLORS["blue"], edgecolor=PAPER))
             ax.text(0.5, 0.3, "shape (4,)", ha="center", fontsize=10.5, color=INK["axis"])
         elif i == 2:
             for r in range(3):
                 for c in range(3):
                     ax.add_patch(Rectangle((0.2 + c * 0.2, 0.24 + r * 0.18), 0.16, 0.15,
-                                           facecolor=SOFT_COLORS["green"], edgecolor="white"))
+                                           facecolor=SOFT_COLORS["green"], edgecolor=PAPER))
             ax.text(0.5, 0.1, "shape (3, 3)", ha="center", fontsize=10.5, color=INK["axis"])
         else:
             for d in range(3):
@@ -1099,7 +1100,7 @@ def draw_tensor_blocks(p, out_path, width_in=8.0, height_in=4.5):
                 for r in range(2):
                     for c in range(2):
                         ax.add_patch(Rectangle((0.28 + c * 0.16 + off, 0.34 + r * 0.15 + off), 0.13, 0.12,
-                                               facecolor=SOFT_COLORS["orange"], edgecolor="white", alpha=0.95))
+                                               facecolor=SOFT_COLORS["orange"], edgecolor=PAPER, alpha=0.95))
             ax.text(0.5, 0.12, "shape (d, h, w)", ha="center", fontsize=10.5, color=INK["axis"])
     _suptitle(fig, p.get("title", ""))
     return _finish(fig, out_path)
@@ -1114,7 +1115,7 @@ def draw_matrix_mul_panels(p, out_path, width_in=8.0, height_in=4.5):
         for r in range(rows):
             for c in range(cols):
                 ax.add_patch(Rectangle((x0 + c * cw, y0 - r * ch), cw * 0.92, ch * 0.9,
-                                       facecolor=color, edgecolor="white"))
+                                       facecolor=color, edgecolor=PAPER))
     grid(a, 0.06, 0.80, 2, 3, SOFT_COLORS["blue"])
     a.text(0.44, 0.62, "@", fontsize=18, color=INK["text"])
     grid(a, 0.50, 0.80, 3, 2, SOFT_COLORS["green"])
@@ -1139,7 +1140,7 @@ def draw_tensor_cube_panels(p, out_path, width_in=8.0, height_in=4.5):
         off = d * 0.22
         for t in range(3):
             ax.add_patch(Rectangle((1.0 + t * 0.62 + off, 2.2 + off), 0.55, 0.5,
-                                   facecolor=SOFT_COLORS["blue"], edgecolor="white", alpha=0.95))
+                                   facecolor=SOFT_COLORS["blue"], edgecolor=PAPER, alpha=0.95))
     ax.text(2.6, 1.5, "三维张量：批量 × 时间步 × 特征", ha="center", fontsize=11.5, color=INK["text"])
     for i, (title, lines, col) in enumerate([
         ("通道混合", ["3 条序列拼成一个张量", "进同一个模型做注意力混合"], SOFT_COLORS["green"]),
@@ -1193,7 +1194,7 @@ def _metric_box(ax, pairs, loc="upper left", fontsize=10):
            "lower right": (0.98, 0.04, "right", "bottom"), "lower left": (0.02, 0.04, "left", "bottom")}[loc]
     ax.text(pos[0], pos[1], txt, transform=ax.transAxes, ha=pos[2], va=pos[3], fontsize=fontsize,
             color=INK["axis"], linespacing=1.5,
-            bbox=dict(boxstyle="round,pad=0.35", facecolor="#FFFFFF", edgecolor="#E2E8F0",
+            bbox=dict(boxstyle="round,pad=0.35", facecolor=PAPER, edgecolor=EDGE_SOFT,
                       linewidth=0.8, alpha=0.92))
 
 
@@ -1255,7 +1256,7 @@ def draw_line_band(p, out_path, width_in=8.0, height_in=4.5):
             _band(ax, x, lo, hi, col)
         ax.plot(x, y, color=col, linewidth=2.2, label=s.get("label", ""))
         if not p.get("no_markers") and n <= 24:
-            ax.plot(x, y, linestyle="none", marker="o", markersize=4.5, markerfacecolor="white",
+            ax.plot(x, y, linestyle="none", marker="o", markersize=4.5, markerfacecolor=PAPER,
                     markeredgecolor=col, markeredgewidth=1.4)
     if p.get("logx"):
         ax.set_xscale("log")
@@ -1288,7 +1289,7 @@ def draw_errorbar(p, out_path, width_in=8.0, height_in=4.5):
             v = np.asarray(g.get("values", []), dtype=float)
             e = np.asarray(g.get("errors", np.zeros_like(v)), dtype=float)
             ax.errorbar(xs[:len(v)], v, yerr=e, color=col, linewidth=2.2, marker="o", markersize=5,
-                        markerfacecolor="white", markeredgewidth=1.4, capsize=4, label=g.get("label", ""))
+                        markerfacecolor=PAPER, markeredgewidth=1.4, capsize=4, label=g.get("label", ""))
     else:
         fig, ax = new_fig(max(width_in, 0.8 * len(cats) * max(1, len(groups)) + 1.5), height_in)
         n = len(groups); w = 0.8 / max(1, n)
@@ -1325,7 +1326,7 @@ def draw_parity(p, out_path, width_in=8.0, height_in=4.5):
         pr = np.asarray(g.get("predicted", []), dtype=float)
         ac = np.asarray(g.get("actual", []), dtype=float)
         n = min(len(pr), len(ac)); pr, ac = pr[:n], ac[:n]
-        ax.scatter(ac, pr, s=42, color=col, edgecolor="white", linewidth=0.8, zorder=3,
+        ax.scatter(ac, pr, s=42, color=col, edgecolor=PAPER, linewidth=0.8, zorder=3,
                    label=g.get("label", ""))
         allp.append(pr); alla.append(ac)
     pr = np.concatenate(allp) if allp else np.array([])
@@ -1378,7 +1379,7 @@ def draw_calibration(p, out_path, width_in=8.0, height_in=4.5):
     else:
         fig, ax = new_fig(width_in, height_in); axh = None
     w = 0.9 / max(1, len(conf))
-    ax.bar(conf, acc, width=w, color=SOFT_COLORS["blue"], edgecolor="#FFFFFF", linewidth=0.8,
+    ax.bar(conf, acc, width=w, color=SOFT_COLORS["blue"], edgecolor=PAPER, linewidth=0.8,
            zorder=2, label="实际正确率")
     ax.plot([0, 1], [0, 1], color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.4,
             zorder=3, label="理想校准")
@@ -1392,7 +1393,7 @@ def draw_calibration(p, out_path, width_in=8.0, height_in=4.5):
     _metric_box(ax, [("ECE", "%.4f" % ece), ("MCE", "%.4f" % mce), ("N", "%d" % int(total))],
                 loc=p.get("metrics_loc", "lower right"))
     if axh is not None:
-        axh.bar(conf, cnt, width=w, color=SOFT_COLORS["grey"], edgecolor="#FFFFFF", linewidth=0.6)
+        axh.bar(conf, cnt, width=w, color=SOFT_COLORS["grey"], edgecolor=PAPER, linewidth=0.6)
         axh.set_ylabel("样本量", fontsize=10)
         axh.set_xlabel(p.get("xlabel", "预测置信度"))
     else:
@@ -1423,7 +1424,7 @@ def draw_confusion(p, out_path, width_in=8.0, height_in=4.5):
         for j in range(m.shape[1]):
             v = z[i, j]
             ax.text(j, i, fmt % v, ha="center", va="center", fontsize=10,
-                    color="#FFFFFF" if v > 0.6 * (z.max() or 1) else INK["text"])
+                    color=PAPER if v > 0.6 * (z.max() or 1) else INK["text"])
     ax.set_xticks(range(len(labels))); ax.set_xticklabels(labels, rotation=30, ha="right", fontsize=10)
     ax.set_yticks(range(m.shape[0])); ax.set_yticklabels(labels, fontsize=10)
     ax.set_xlabel(p.get("xlabel", "预测")); ax.set_ylabel(p.get("ylabel", "真实"))
@@ -1442,7 +1443,7 @@ def draw_confusion(p, out_path, width_in=8.0, height_in=4.5):
     if p.get("colorbar"):
         cb = fig.colorbar(im, ax=ax, shrink=0.9, pad=0.02)
         cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=11)
-        cb.outline.set_edgecolor("#E2E8F0")
+        cb.outline.set_edgecolor(EDGE_SOFT)
     return _finish(fig, out_path)
 
 
@@ -1467,7 +1468,7 @@ def draw_violin(p, out_path, width_in=8.0, height_in=4.5):
                         whiskerprops=dict(color=SOFT_COLORS["grey"]),
                         capprops=dict(color=SOFT_COLORS["grey"]))
         for b in bp["boxes"]:
-            b.set_facecolor("#FFFFFF"); b.set_edgecolor(SOFT_COLORS["grey"])
+            b.set_facecolor(PAPER); b.set_edgecolor(SOFT_COLORS["grey"])
     if p.get("show_points"):
         rng = np.random.default_rng(7)                      # 固定种子 → 图可复现
         for i, d in enumerate(data):
@@ -1548,8 +1549,8 @@ def draw_radar(p, out_path, width_in=8.0, height_in=4.5):
     ax.text(0.995, -0.03, "量程 0–%.3g" % top, transform=ax.transAxes, ha="right", va="top",
             fontsize=9.5, color=INK["tick"])
     ax.set_xticks(ang[:-1]); ax.set_xticklabels(labels, fontsize=10.5, color=INK["text"])
-    ax.grid(color="#F1F3F5", linewidth=0.8)
-    ax.spines["polar"].set_color("#E2E8F0")
+    ax.grid(color=GRID, linewidth=0.8)
+    ax.spines["polar"].set_color(EDGE_SOFT)
     ax.set_title(p.get("title", ""), pad=22)
     if any(s.get("label") for s in series):
         ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.10), ncol=min(len(series), 3),
@@ -1633,7 +1634,7 @@ def draw_flamegraph(p, out_path, width_in=8.0, height_in=4.5):
     for name, x0, w, d in vis:
         row = d - depth0
         col = SOFT_COLORS[depth_cols[(max(1, d) - 1) % len(depth_cols)]]
-        ax.add_patch(Rectangle((x0, row), w, row_h, facecolor=col, edgecolor="#FFFFFF", linewidth=0.8))
+        ax.add_patch(Rectangle((x0, row), w, row_h, facecolor=col, edgecolor=PAPER, linewidth=0.8))
         if not p.get("labels", True) or not name:
             continue
         avail = w * px_per_unit - 10
@@ -1691,7 +1692,7 @@ def draw_panels(p, out_path, width_in=8.0, height_in=4.5):
             ax.bar(np.arange(len(vals)), vals, width=0.62, color=col, edgecolor=col)
             ax.set_xticks(np.arange(len(vals))); _tick_labels(ax, labs, 3.0)
         elif kind == "scatter":
-            ax.scatter(pn.get("x", []), pn.get("y", []), s=28, color=col, edgecolor="white", linewidth=0.7)
+            ax.scatter(pn.get("x", []), pn.get("y", []), s=28, color=col, edgecolor=PAPER, linewidth=0.7)
         elif kind == "area":
             xs = np.asarray(pn.get("x", []), dtype=float); ys = np.asarray(pn.get("y", []), dtype=float)
             ax.plot(xs, ys, color=col, linewidth=2.0)
@@ -1744,7 +1745,7 @@ def draw_waterfall(p, out_path, width_in=8.0, height_in=4.5):
     for i, v in enumerate(vals):
         bottom = run if v >= 0 else run + v
         ax.bar(i, v, bottom=bottom, width=0.62, color=(SOFT_COLORS["green"] if v >= 0 else SOFT_COLORS["red"]),
-               edgecolor="#FFFFFF", linewidth=0.8)
+               edgecolor=PAPER, linewidth=0.8)
         if i:
             ax.plot([i - 1 + 0.31, i - 0.31], [run, run], color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.0, zorder=1)
         lows.append(min(bottom, bottom + v)); highs.append(max(bottom, bottom + v))
@@ -1757,7 +1758,7 @@ def draw_waterfall(p, out_path, width_in=8.0, height_in=4.5):
                 va="bottom" if v >= 0 else "top", fontsize=9.5, color=INK["tick"])
         run2 += v
     if show_total:
-        ax.bar(n - 1, run, width=0.62, color=SOFT_COLORS["dark"], edgecolor="#FFFFFF", linewidth=0.8)
+        ax.bar(n - 1, run, width=0.62, color=SOFT_COLORS["dark"], edgecolor=PAPER, linewidth=0.8)
         ax.text(n - 1, run + span * 0.02, fmt % run, ha="center", va="bottom", fontsize=9.5, color=INK["tick"])
         labels = labels + [p.get("total_label", "总计")]
     ax.axhline(0, color=INK["tick"], linewidth=0.8)
@@ -1787,17 +1788,17 @@ def draw_contourf(p, out_path, width_in=8.0, height_in=4.5):
     levels = int(p.get("levels", 12))
     cf = ax.contourf(X, Y, Z, levels=levels, cmap=_soft_cmap(p.get("cmap", "blue")))
     if p.get("lines", True):
-        ax.contour(X, Y, Z, levels=levels, colors="#FFFFFF", linewidths=0.5, alpha=0.55)
+        ax.contour(X, Y, Z, levels=levels, colors=PAPER, linewidths=0.5, alpha=0.55)
     if p.get("mark_min"):
         k = int(np.argmin(Z)); ax.scatter([X.ravel()[k]], [Y.ravel()[k]], s=70, marker="*",
-                                          color=SOFT_COLORS["red"], edgecolor="white", linewidth=0.8, zorder=5)
+                                          color=SOFT_COLORS["red"], edgecolor=PAPER, linewidth=0.8, zorder=5)
         ax.text(X.ravel()[k], Y.ravel()[k], " min=%.4g" % Z.ravel()[k], fontsize=9.5, color=INK["text"], va="bottom")
     ax.set_xlabel(p.get("xlabel", "x")); ax.set_ylabel(p.get("ylabel", "y"))
     ax.set_title(p.get("title", ""), pad=12)
     if p.get("colorbar", True):
         cb = fig.colorbar(cf, ax=ax, shrink=0.92, pad=0.02)
         cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=11)
-        cb.outline.set_edgecolor("#E2E8F0")
+        cb.outline.set_edgecolor(EDGE_SOFT)
     return _finish(fig, out_path)
 
 
@@ -1867,7 +1868,7 @@ def draw_residual(p, out_path, width_in=8.0, height_in=4.5):
     for kk, ls in ((2, "--"), (3, ":")):
         ax.axhline(kk * sigma, color=SOFT_COLORS["grey"], linestyle=ls, linewidth=1.0, zorder=2)
         ax.axhline(-kk * sigma, color=SOFT_COLORS["grey"], linestyle=ls, linewidth=1.0, zorder=2)
-    ax.scatter(fitted, resid, s=40, color=SOFT_COLORS["blue"], edgecolor="white", linewidth=0.8, zorder=3)
+    ax.scatter(fitted, resid, s=40, color=SOFT_COLORS["blue"], edgecolor=PAPER, linewidth=0.8, zorder=3)
     inside = float(np.mean(np.abs(resid) <= 2 * sigma)) if len(resid) else 0.0
     _metric_box(ax, [("N", "%d" % len(resid)), ("σ", "%.3g" % sigma),
                      ("±2σ 内", "%.1f%%" % (inside * 100))], loc=p.get("metrics_loc", "upper right"))
@@ -1885,7 +1886,7 @@ def draw_fit_band(p, out_path, width_in=8.0, height_in=4.5):
     if not len(x) or not len(y):
         raise SystemExit("fit_band 需要 x/y")
     fig, ax = new_fig(width_in, height_in)
-    ax.scatter(x, y, s=42, color=SOFT_COLORS["blue"], edgecolor="white", linewidth=0.8, zorder=3,
+    ax.scatter(x, y, s=42, color=SOFT_COLORS["blue"], edgecolor=PAPER, linewidth=0.8, zorder=3,
                label=p.get("label", "样本"))
     band = p.get("band") or {}
     col = soft(p.get("color")) if p.get("color") else SOFT_COLORS["red"]
@@ -2004,7 +2005,7 @@ def draw_km(p, out_path, width_in=8.0, height_in=4.5):
             col = _cyc(i, g.get("color"))
             xpos = np.asarray(rts, dtype=float) + (i - (ng - 1) / 2.0) * w   # 多组必须错开
             axr.bar(xpos, counts, width=w * 0.86, color=col, alpha=0.75,
-                    edgecolor="#FFFFFF", linewidth=0.6, label=g.get("label", ""))
+                    edgecolor=PAPER, linewidth=0.6, label=g.get("label", ""))
             if show_n:
                 for xp, c in zip(xpos, counts):
                     axr.text(xp, c, "%d" % c, ha="center", va="bottom", fontsize=8, color=INK["tick"])
@@ -2036,7 +2037,7 @@ def draw_forest(p, out_path, width_in=8.0, height_in=4.5):
     for i, yy in enumerate(ys):
         col = _cyc(i) if p.get("color_each") else SOFT_COLORS["blue"]
         ax.plot([lo[i], hi[i]], [yy, yy], color=col, linewidth=1.8, zorder=2)
-        ax.scatter([est[i]], [yy], s=60, color=col, edgecolor="white", linewidth=0.9, zorder=3)
+        ax.scatter([est[i]], [yy], s=60, color=col, edgecolor=PAPER, linewidth=0.9, zorder=3)
         if p.get("annotate", True):
             ax.text(hi.max() + (hi.max() - lo.min()) * 0.04, yy,
                     "%.3g [%.3g, %.3g]" % (est[i], lo[i], hi[i]), va="center", fontsize=9, color=INK["axis"])
@@ -2052,7 +2053,7 @@ def draw_forest(p, out_path, width_in=8.0, height_in=4.5):
                              edgecolor=SOFT_COLORS["purple"], alpha=0.85, zorder=3))
         ys = np.append(ys, sy); labels = labels + [p.get("summary_label", "合并效应")]
     ax.set_yticks(ys); ax.set_yticklabels(labels, fontsize=10)
-    ax.axhline(ys.min() - 0.6, color="#E2E8F0", linewidth=0.8)
+    ax.axhline(ys.min() - 0.6, color=EDGE_SOFT, linewidth=0.8)
     ax.set_ylim(ys.min() - 0.9, ys.max() + 0.6)
     if p.get("log", True):
         ax.set_xscale("log")
@@ -2075,8 +2076,8 @@ def draw_volcano(p, out_path, width_in=8.0, height_in=4.5):
     up = (fc >= fct) & (pv <= pt); dn = (fc <= -fct) & (pv <= pt); ns = ~(up | dn)
     fig, ax = new_fig(width_in, height_in)
     ax.scatter(fc[ns], y[ns], s=26, color=SOFT_COLORS["grey"], alpha=0.65, edgecolor="none", label="不显著")
-    ax.scatter(fc[dn], y[dn], s=32, color=SOFT_COLORS["blue"], alpha=0.85, edgecolor="white", linewidth=0.4, label="下调")
-    ax.scatter(fc[up], y[up], s=32, color=SOFT_COLORS["red"], alpha=0.85, edgecolor="white", linewidth=0.4, label="上调")
+    ax.scatter(fc[dn], y[dn], s=32, color=SOFT_COLORS["blue"], alpha=0.85, edgecolor=PAPER, linewidth=0.4, label="下调")
+    ax.scatter(fc[up], y[up], s=32, color=SOFT_COLORS["red"], alpha=0.85, edgecolor=PAPER, linewidth=0.4, label="上调")
     ax.axhline(-np.log10(pt), color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.0)
     ax.axvline(fct, color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.0)
     ax.axvline(-fct, color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.0)
@@ -2240,7 +2241,7 @@ def draw_clustered_heatmap(p, out_path, width_in=8.0, height_in=4.5):
         # ⚠️ 必须挂在**热图轴**上：挂到列树轴上会把色条压成一条细缝，刻度标签互相重叠
         cb = fig.colorbar(im, ax=ax, shrink=0.92, pad=0.02)
         cb.set_label(p.get("colorbar_label", "z-score" if mode != "none" else ""), color=INK["axis"], fontsize=11)
-        cb.outline.set_edgecolor("#E2E8F0")
+        cb.outline.set_edgecolor(EDGE_SOFT)
     if row_segs or col_segs:
         # 关掉 autolayout 后必须自己留边距，否则底部 xlabel 会掉到画布外
         fig.subplots_adjust(left=0.04, right=0.90, top=0.92, bottom=0.18)
@@ -2255,14 +2256,14 @@ def _prep_3d(ax, p):
     from matplotlib.ticker import MaxNLocator
     for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
         axis.pane.set_facecolor((1.0, 1.0, 1.0, 1.0))
-        axis.pane.set_edgecolor("#E2E8F0")
+        axis.pane.set_edgecolor(EDGE_SOFT)
         axis.set_major_locator(MaxNLocator(4))
     ax.tick_params(labelsize=9)
     try:                                     # 收缩 3D 盒子：投影后的刻度文字最容易顶出画布
         ax.set_box_aspect(None, zoom=float(p.get("zoom", 0.86)))
     except Exception:
         pass
-    ax.grid(True, color="#F1F3F5", linewidth=0.8)
+    ax.grid(True, color=GRID, linewidth=0.8)
     if p.get("view"):
         ax.view_init(elev=float(p["view"][0]), azim=float(p["view"][1]))
 
@@ -2301,7 +2302,7 @@ def draw_surface3d(p, out_path, width_in=8.0, height_in=4.5):
     if mappable is not None and p.get("colorbar", True):
         cb = fig.colorbar(mappable, ax=ax, shrink=0.62, pad=0.08)
         cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=10)
-        cb.outline.set_edgecolor("#E2E8F0")
+        cb.outline.set_edgecolor(EDGE_SOFT)
     return _finish(fig, out_path)
 
 
@@ -2317,7 +2318,7 @@ def draw_scatter3d(p, out_path, width_in=8.0, height_in=4.5):
         for i, g in enumerate(p["groups"]):
             col = _cyc(i, g.get("color"))
             ax.scatter(g.get("x", []), g.get("y", []), g.get("z", []), s=float(p.get("size", 36)),
-                       color=col, edgecolor="white", linewidth=0.5, label=g.get("label", ""), depthshade=False)
+                       color=col, edgecolor=PAPER, linewidth=0.5, label=g.get("label", ""), depthshade=False)
         if any(g.get("label") for g in p["groups"]):
             ax.legend(loc="upper left", fontsize=9)
     else:
@@ -2325,14 +2326,14 @@ def draw_scatter3d(p, out_path, width_in=8.0, height_in=4.5):
         mappable = ax.scatter(p.get("x", []), p.get("y", []), p.get("z", []), s=float(p.get("size", 36)),
                               c=c, cmap=(_soft_cmap(p.get("cmap", "blue")) if c is not None else None),
                               color=(None if c is not None else (soft(p.get("color")) if p.get("color") else SOFT_COLORS["blue"])),
-                              edgecolor="white", linewidth=0.5, depthshade=False)
+                              edgecolor=PAPER, linewidth=0.5, depthshade=False)
     _prep_3d(ax, p)
     ax.set_xlabel(p.get("xlabel", "x")); ax.set_ylabel(p.get("ylabel", "y")); ax.set_zlabel(p.get("zlabel", "z"))
     ax.set_title(p.get("title", ""), pad=10)
     if mappable is not None and p.get("colorbar", True):
         cb = fig.colorbar(mappable, ax=ax, shrink=0.62, pad=0.08)
         cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=10)
-        cb.outline.set_edgecolor("#E2E8F0")
+        cb.outline.set_edgecolor(EDGE_SOFT)
     return _finish(fig, out_path)
 
 
@@ -2384,13 +2385,13 @@ def draw_swimlane(p, out_path, width_in=8.0, height_in=4.5):
     band = FILL["neutral"]
     for i, ln in enumerate(lanes):
         col = soft(ln.get("color")) if ln.get("color") else None
-        fc = ("#FFFFFF" if i % 2 else band) if col is None else col
+        fc = (PAPER if i % 2 else band) if col is None else col
         if direction == "TD":
-            ax.add_patch(Rectangle((i - 0.5, -0.5), 1.0, nv, facecolor=fc, edgecolor="#E2E8F0", linewidth=0.8))
+            ax.add_patch(Rectangle((i - 0.5, -0.5), 1.0, nv, facecolor=fc, edgecolor=EDGE_SOFT, linewidth=0.8))
             ax.text(i, -0.34, str(ln.get("label", "")), ha="center", va="bottom", fontsize=10.5,
                     color=INK["title"], fontweight="bold")
         else:
-            ax.add_patch(Rectangle((-0.5, i - 0.5), nu, 1.0, facecolor=fc, edgecolor="#E2E8F0", linewidth=0.8))
+            ax.add_patch(Rectangle((-0.5, i - 0.5), nu, 1.0, facecolor=fc, edgecolor=EDGE_SOFT, linewidth=0.8))
             ax.text(-0.56, i, str(ln.get("label", "")), ha="right", va="center", fontsize=10.5,
                     color=INK["title"], fontweight="bold")
     # 步骤方块
@@ -2406,7 +2407,7 @@ def draw_swimlane(p, out_path, width_in=8.0, height_in=4.5):
             u, vv = li, col_of[k]
         else:
             u, vv = col_of[k], li
-        ax.add_patch(Rectangle((u - sw / 2, vv - sh / 2), sw, sh, facecolor=col, edgecolor="#FFFFFF",
+        ax.add_patch(Rectangle((u - sw / 2, vv - sh / 2), sw, sh, facecolor=col, edgecolor=PAPER,
                                linewidth=1.0, zorder=3))
         ax.text(u, vv, str(st.get("label", st.get("id", ""))), ha="center", va="center", fontsize=9.5,
                 color=INK["text"], zorder=4)

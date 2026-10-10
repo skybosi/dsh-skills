@@ -14,6 +14,8 @@
 import os
 import re
 
+from palette import FILL as _FILL, INK as _INK   # 骨架 mmd 的颜色也走同一色板（无 matplotlib 依赖）
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # ---------------------------------------------------------------------------
@@ -68,7 +70,14 @@ A_FAMILIES = [
      "C4Context\n  title 系统上下文\n  Person(user, \"用户\", \"说明\")\n  System(sys, \"本系统\", \"说明\")\n  System_Ext(ext, \"外部系统\", \"说明\")\n  Rel(user, sys, \"使用\")\n  Rel(sys, ext, \"调用\")"),
     ("flow", "flowchart", "arch", "C4 风格架构图（人/本系统/外部系统 + 关系，用 flowchart 复刻，比 C4Context 可控）",
      ["C4 架构图", "C4 上下文图", "C4", "上下文图", "系统上下文", "外部系统", "架构上下文"],
-     "flowchart LR\n  U([用户]) --> S[本系统]\n  S --> E1[外部系统 A]\n  S --> E2[外部系统 B]\n  classDef person fill:#FFE2BB,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  classDef sys fill:#C2E8F7,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  classDef ext fill:#F3F3F4,stroke:#212529,stroke-width:1.5px,color:#212529,rx:6,ry:6;\n  class U person;\n  class S sys;\n  class E1,E2 ext;"),
+     "flowchart LR\n  U([用户]) --> S[本系统]\n  S --> E1[外部系统 A]\n  S --> E2[外部系统 B]\n"
+     "  classDef person fill:%s,stroke:%s,stroke-width:1.5px,color:%s,rx:6,ry:6;\n"
+     "  classDef sys fill:%s,stroke:%s,stroke-width:1.5px,color:%s,rx:6,ry:6;\n"
+     "  classDef ext fill:%s,stroke:%s,stroke-width:1.5px,color:%s,rx:6,ry:6;\n"
+     "  class U person;\n  class S sys;\n  class E1,E2 ext;" % (
+         _FILL["input"], _INK["text"], _INK["text"],
+         _FILL["category"], _INK["text"], _INK["text"],
+         _FILL["leaf"], _INK["text"], _INK["text"])),
     ("flow", "flowchart", "arch", "分层架构图（subgraph 当泳道/分层，最稳的架构画法）",
      ["分层架构", "分层图", "泳道", "子系统", "模块图"],
      "flowchart LR\n  subgraph 接入层\n    LB[负载均衡] --> GW[网关]\n  end\n  subgraph 服务层\n    OS[订单服务] --> PS[支付服务]\n  end\n  subgraph 存储层\n    DB[(MySQL)]\n    RD[(Redis)]\n  end\n  GW --> OS\n  OS --> DB\n  OS --> RD"),

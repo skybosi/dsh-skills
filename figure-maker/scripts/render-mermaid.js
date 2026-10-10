@@ -21,15 +21,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const PW = process.env.PW_MODULES || '/tmp/pw/node_modules';
-// Playwright 默认走 "chromium headless shell"，本机可能只装了完整 Chromium → 指定浏览器目录
-if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
-  const cands = ['/tmp/pw-browsers', path.join(require('os').homedir(), 'Library/Caches/ms-playwright')];
-  for (const c of cands) { if (fs.existsSync(c)) { process.env.PLAYWRIGHT_BROWSERS_PATH = c; break; } }
-}
-let chromium;
-try { ({ chromium } = require('playwright')); }                      // 常规安装
-catch (e) { ({ chromium } = require(path.join(PW, 'playwright'))); }  // 本机特殊位置（PW_MODULES）
+// 跨平台解析 Playwright（浏览器目录 + 模块位置）——逻辑**唯一一份**在 pw-env.js
+const { applyBrowserDir, requirePlaywright } = require('./pw-env');
+applyBrowserDir();
+const { chromium } = requirePlaywright();
 // 优先用**随 skill 内置**的 mermaid 运行时（skill 独立、无需 npm install）
 const VENDOR = path.join(__dirname, 'vendor', 'mermaid.min.js');
 const MERMAID_JS = fs.existsSync(VENDOR) ? VENDOR : require.resolve('mermaid/dist/mermaid.min.js');
@@ -48,8 +43,10 @@ const FONT_STACK = 'system-ui, -apple-system, "Noto Sans SC", "PingFang SC", "Mi
 // ---------------------------------------------------------------------------
 const SLOT = {
   // SOFT_COLORS
-  blue: '#C2E8F7', red: '#F87171', green: '#CCE7CF', purple: '#FCE0E1',
-  orange: '#FFE2BB', grey: '#9CA3AF', dark: '#4B5563',
+  // 这几个键与 palette.SOFT_COLORS 同义（**派生色**，不是论文淡色；淡色在 category/input/output/root）
+  // —— 以前这里写成淡色，导致「脱离 draw.py 单独调用渲染器」与「走管线（--palette 覆盖）」配色不一致。
+  blue: '#84D0EF', red: '#F87171', green: '#9DD1A2', purple: '#F59B9E',
+  orange: '#FFC474', grey: '#9CA3AF', dark: '#4B5563',
   // FILL
   neutral: '#F8FBFF', root: '#FCE0E1', category: '#C2E8F7', leaf: '#F3F3F4',
   input: '#FFE2BB', output: '#CCE7CF', warning: '#F2F4C1', error: '#FECACA',
@@ -59,6 +56,8 @@ const SLOT = {
   stroke_warning: '#212529', stroke_error: '#F87171',
   // INK
   ink_title: '#212529', ink_text: '#212529', ink_axis: '#4B5563', ink_tick: '#6B7280',
+  // 中性色（与 palette.py 同源；管线经 --palette 覆盖）
+  paper: '#FFFFFF', grid: '#F1F3F5', edge_soft: '#E2E8F0', axis_edge: '#D1D5DB',
 };
 
 /** 由 SLOT 生成主题（不内联色值，全部走 SLOT，便于被 --palette 覆盖） */
@@ -67,7 +66,7 @@ function buildSoftTheme() {
     primaryColor: SLOT.category, primaryBorderColor: SLOT.blue, primaryTextColor: SLOT.ink_text,
     secondaryColor: SLOT.leaf, tertiaryColor: SLOT.neutral,
     lineColor: SLOT.ink_tick, textColor: SLOT.ink_text, mainBkg: SLOT.category, nodeBorder: SLOT.blue,
-    defaultLinkColor: SLOT.ink_tick, clusterBkg: SLOT.neutral, clusterBorder: '#E2E8F0',
+    defaultLinkColor: SLOT.ink_tick, clusterBkg: SLOT.neutral, clusterBorder: SLOT.edge_soft,
     titleColor: SLOT.ink_text, edgeLabelBackground: 'transparent', labelBackground: 'transparent',
     background: '#FFFFFF',
     // —— 时序图 ——
@@ -87,7 +86,7 @@ function buildSoftTheme() {
     taskBkgColor: SLOT.blue, taskBorderColor: SLOT.blue, taskTextColor: SLOT.ink_text,
     taskTextOutsideColor: SLOT.ink_text, taskTextDarkColor: SLOT.ink_text,
     activeTaskBkgColor: SLOT.orange, activeTaskBorderColor: SLOT.orange,
-    doneTaskBkgColor: '#E2E8F0', doneTaskBorderColor: SLOT.stroke_leaf,
+    doneTaskBkgColor: SLOT.edge_soft, doneTaskBorderColor: SLOT.stroke_leaf,
     critBkgColor: SLOT.red, critBorderColor: SLOT.red, todayLineColor: SLOT.red, gridColor: SLOT.leaf,
     // —— 饼图 ——
     pie1: SLOT.blue, pie2: SLOT.green, pie3: SLOT.orange, pie4: SLOT.purple, pie5: SLOT.red,
@@ -100,13 +99,13 @@ function buildSoftTheme() {
     quadrant1TextFill: SLOT.ink_text, quadrant2TextFill: SLOT.ink_text, quadrant3TextFill: SLOT.ink_text, quadrant4TextFill: SLOT.ink_text,
     quadrantPointFill: SLOT.blue, quadrantPointTextFill: SLOT.ink_text,
     quadrantXAxisTextFill: SLOT.dark, quadrantYAxisTextFill: SLOT.dark, quadrantTitleFill: SLOT.ink_text,
-    quadrantInternalBorderStrokeFill: '#E2E8F0', quadrantExternalBorderStrokeFill: '#D1D5DB',
+    quadrantInternalBorderStrokeFill: SLOT.edge_soft, quadrantExternalBorderStrokeFill: SLOT.axis_edge,
     // —— git 图 ——
     git0: SLOT.blue, git1: SLOT.green, git2: SLOT.orange, git3: SLOT.purple,
     git4: SLOT.red, git5: SLOT.grey, git6: SLOT.dark, git7: SLOT.category,
     commitLabelColor: SLOT.ink_text, commitLabelBackground: SLOT.neutral,
     // —— xychart / 其它 ——
-    xyChart: { backgroundColor: '#FFFFFF', titleColor: SLOT.ink_text, xAxisLabelColor: SLOT.dark, xAxisTitleColor: SLOT.dark, xAxisTickColor: SLOT.ink_tick, xAxisLineColor: '#D1D5DB', yAxisLabelColor: SLOT.dark, yAxisTitleColor: SLOT.dark, yAxisTickColor: SLOT.ink_tick, yAxisLineColor: '#D1D5DB', plotBorderColor: '#E2E8F0' },
+    xyChart: { backgroundColor: SLOT.paper, titleColor: SLOT.ink_text, xAxisLabelColor: SLOT.dark, xAxisTitleColor: SLOT.dark, xAxisTickColor: SLOT.ink_tick, xAxisLineColor: '#D1D5DB', yAxisLabelColor: SLOT.dark, yAxisTitleColor: SLOT.dark, yAxisTickColor: SLOT.ink_tick, yAxisLineColor: '#D1D5DB', plotBorderColor: '#E2E8F0' },
   };
 }
 

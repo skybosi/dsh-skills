@@ -68,6 +68,13 @@ python3 $S spec.json                              # 出图（默认 out/<id>.svg
 python3 $S spec.json -o out/fig.png               # 格式由**扩展名**决定：svg/png/webp/pdf/eps/jpeg/tiff
 python3 $S spec.json --check                      # 版式检查当红线（不过关 → 退出码 1）
 python3 $S --batch specs/                         # 批量：把目录下所有 *.json 都画出来
+
+> **跨平台**（macOS / Linux / Windows 都支持）：
+> · Windows 上把 `python3` 换成 `python`，虚拟环境路径是 `.venv\Scripts\`（不是 `.venv/bin/`）
+> · 中文字体按平台自动兜底：Noto Sans SC（Linux）→ PingFang SC（macOS）→ Microsoft YaHei（Windows）
+> · A 类要 Chromium：浏览器目录**按平台自动探测**（macOS `~/Library/Caches/ms-playwright`、
+>   Linux `~/.cache/ms-playwright`、Windows `%LOCALAPPDATA%\ms-playwright`）并校验版本号；
+>   也可用 `PLAYWRIGHT_BROWSERS_PATH` 指定。缺浏览器时 `--doctor` 会给安装命令
 ```
 
 **验收习惯**：出图后**一定看图**（`read_image` 或图片查看器）。机器检查只保证"不重叠/不越界"，
@@ -146,7 +153,7 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 ## 风格规范（保持一致才好看）
 - **逐字节一致是「同一环境内」的性质**：换成别的 matplotlib / 字体版本后，B 类样例的文本度量会变，进而**所有路径坐标整体微移**（实测同一 spec 在两台环境里 diff 上千行，肉眼无差别）。所以：仓库里的样例由固定环境生成；本地重生成会全库变动，**样例改动请与代码改动分开提交**。
 
-- **软色板（唯一来源是 `style.py`）**：`_PAPER_TINT`（论文原色：蓝 `#C2E8F7` / 绿 `#CCE7CF` / 橙 `#FFE2BB` / 紫 `#FCE0E1`）
+- **软色板（唯一来源是 `style.py`）**：色板**唯一来源是 `palette.py`**（纯数据、不依赖 matplotlib；`catalog.py` 的 A 类骨架也取它）——`_PAPER_TINT`（论文原色：蓝 `#C2E8F7` / 绿 `#CCE7CF` / 橙 `#FFE2BB` / 紫 `#FCE0E1`）
   → `_shade(l_factor=0.84)` 派生出 `SOFT_COLORS`（更饱和，用于线 / 柱 / 标记 / A 类节点边框）；`FILL` / `STROKE` / `INK` 同源；
   `ROLES` 把语义角色（`attention` `ffn` `norm` `embedding` `project` `output` `block`）映射到色槽。**≤4 个语义色**，同义同色；顺序色图由 `_soft_cmap` 从同一色板生成
 - **改配色只需改一处**：A 类（Mermaid）主题由 `style.palette_payload()` 经 `--palette` 注入 `themeVariables`，所以改 `_PAPER_TINT`（或 `_shade` 的 `l_factor`，越小越深）后**两类图一起变**，改完记得跑 `build_examples.py` 重生成样例

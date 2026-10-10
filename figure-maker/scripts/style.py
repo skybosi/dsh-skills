@@ -6,7 +6,6 @@
 check_layout() 把《布局质量红线》做成**可量化检查**（量文字 bbox：重叠 / 越出画布），
 结果写进 JSON，供《布局检查》表引用 —— 不靠自述打勾。
 """
-import colorsys
 import json
 import os
 
@@ -19,69 +18,15 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.text import Text
 
-# ---- 规范色板（唯一来源，禁止 Matplotlib 默认色）----
-# 色系取自 Vaswani et al. 2017《Attention Is All You Need》Figure 1 原图。
-#
-# 论文原图只有「淡色填充」这一个层级，而本 skill 需要两个层级：
-#   FILL[*]        —— 大面积填充（节点底、色块）
-#   SOFT_COLORS[*] —— 同色系的描边 / 系列色（线、柱、标记、A 类节点边框）
-# 两级若取同一个值，A 类节点就「填充与边框同色」→ 边框直接看不见（实测类图分隔线消失）。
-# 故 SOFT_COLORS 由论文淡色按 HLS 明度压暗一档派生，保持同一色系并恢复两级层次。
-# 论文原图没有独立的红与中性灰，red / grey / dark / FILL["neutral"] / FILL["error"]
-# 保留原值，继续承担「错误告警」与「中性」语义。
+# ---- 色板：**唯一来源在 palette.py**（纯数据 + 标准库，无 matplotlib 依赖）----
+# 见 palette.py 顶部说明：把色值抽出去是为了让 --list / --recommend / --example 这些
+# 不该依赖 matplotlib 的路径也能共用同一套色值（A 类骨架里的 classDef 颜色就从这里取）。
+from palette import (AXIS_EDGE, EDGE_SOFT, FILL, GRID, INK, PAPER, ROLES, SOFT_COLORS,  # noqa: F401
+                     STROKE, _PAPER_TINT, shade as _shade)                              # noqa: F401
 
-
-def _shade(hex_color, l_factor=0.84):
-    """同色系压暗一档，派生「描边 / 系列色」层。"""
-    h = hex_color.lstrip("#")
-    r, g, b = (int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
-    hh, ll, ss = colorsys.rgb_to_hls(r, g, b)
-    r2, g2, b2 = colorsys.hls_to_rgb(hh, max(0.0, min(1.0, ll * l_factor)), ss)
-    return "#%02X%02X%02X" % (round(r2 * 255), round(g2 * 255), round(b2 * 255))
-
-
-# 论文原图实测的淡色（唯一来源：下面 SOFT_COLORS 与 FILL 都从这里取）
-_PAPER_TINT = {
-    "blue":   "#C2E8F7",   # Feed Forward 天蓝
-    "green":  "#CCE7CF",   # Softmax 淡绿
-    "orange": "#FFE2BB",   # Multi-Head Attention 蜜桃橙
-    "purple": "#FCE0E1",   # Embedding 粉
-}
-SOFT_COLORS = {k: _shade(v) for k, v in _PAPER_TINT.items()}
-SOFT_COLORS.update({
-    "red":    "#F87171",   # 论文色板无红，保留原值承担「错误 / 告警」语义
-    "grey":   "#9CA3AF",   # 论文色板无「中性系列灰」这一角色，保留原值
-    "dark":   "#4B5563",   # 无对应色，保留
-})
-# 语义填充/描边。论文原图统一是「淡色填充 + 深色描边」，故 STROKE 走深色而非同色系深一号。
-# 注意：STROKE 在本次改动前**全仓无任何引用**（A 类配色原本内联在 render-mermaid.js 里），
-# 现由 style.role_colors() 与 A 类主题共同使用。
-FILL = {
-    "neutral":  "#F8FBFF", "root": _PAPER_TINT["purple"], "category": _PAPER_TINT["blue"],
-    "leaf": "#F3F3F4", "input": _PAPER_TINT["orange"], "output": _PAPER_TINT["green"],
-    "warning": "#F2F4C1", "error": "#FECACA",
-    "muted": "#D0D4E2",       # 论文「Linear」淡紫灰：比 leaf 更冷一档的中性填充
-}
-STROKE = {
-    "neutral":  "#212529", "root": "#212529", "category": "#212529", "leaf": "#212529",
-    "input": "#212529", "output": "#212529", "warning": "#212529", "error": "#F87171",
-    "muted": "#212529",
-}
-INK = {"title": "#212529", "text": "#212529", "axis": "#4B5563", "tick": "#6B7280"}
-
-# ---- 语义角色 → FILL / STROKE 槽位 ----
-# 数据图按「轴 / 序列」组织颜色；结构图（架构、流程、网络）需要按「组件语义」着色。
-# 这一层只做映射，**不新增任何色值**：同一语义角色在所有结构图里必须同色。
-# 新增结构图时先在这里登记角色，不要在 drawer 里内联 hex。
-ROLES = {
-    "attention": "input",      # 注意力类子层
-    "ffn":       "category",   # 前馈 / 变换类子层
-    "norm":      "warning",    # 归一化、残差合并等粘合操作
-    "embedding": "root",       # 嵌入 / 查表层
-    "project":   "muted",      # 线性投影等中性组件（论文用淡紫灰）
-    "output":    "output",     # 输出分布 / Softmax
-    "block":     "leaf",       # 容器 / 背景框
-}
+# 版面常量：所有 B 类图统一用「内容紧致 + 固定留白」保存，
+# 根治「贴边 / 太挤 / 一侧留白过大」（实测曾出现底部只剩 2px）。
+PAD_IN = 0.12          # 紧致留白（英寸）
 
 
 def role_colors(role):
@@ -104,6 +49,7 @@ def palette_payload():
     d.update(FILL)
     d.update({"stroke_" + k: v for k, v in STROKE.items()})
     d.update({"ink_" + k: v for k, v in INK.items()})
+    d.update({"paper": PAPER, "grid": GRID, "edge_soft": EDGE_SOFT, "axis_edge": AXIS_EDGE})
     return d
 
 # 旧 manifest 里的饱和色 → 新色板（规范：颜色只能从 SOFT_COLORS 取；数据本身不动）
@@ -119,16 +65,16 @@ def setup_soft_style():
         "font.family": "sans-serif",
         "font.sans-serif": ["Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Arial"],
         "font.size": 12,
-        "figure.facecolor": "#FFFFFF",
-        "axes.facecolor": "#FFFFFF",
+        "figure.facecolor": PAPER,
+        "axes.facecolor": PAPER,
         "axes.spines.top": False,
         "axes.spines.right": False,
         "axes.spines.left": True,
         "axes.spines.bottom": True,
-        "axes.edgecolor": "#D1D5DB",
+        "axes.edgecolor": AXIS_EDGE,
         "axes.linewidth": 0.8,
         "axes.grid": True,
-        "grid.color": "#F1F3F5",
+        "grid.color": GRID,
         "grid.linewidth": 0.8,
         "grid.linestyle": "--",
         "axes.axisbelow": True,
@@ -193,11 +139,13 @@ def save(fig, out_path, title=None, fmt=None, dpi=300):
         except ImportError:
             raise RuntimeError('输出 webp 需要 Pillow：pip install Pillow')
         buf = io.BytesIO()
-        fig.savefig(buf, format='png', dpi=dpi, facecolor="#FFFFFF", metadata=_meta)
+        fig.savefig(buf, format='png', dpi=dpi, facecolor=PAPER, metadata=_meta,
+                        bbox_inches='tight', pad_inches=PAD_IN)
         buf.seek(0)
         Image.open(buf).convert('RGB').save(out_path, 'WEBP', quality=95, method=6)
         return out_path
-    fig.savefig(out_path, format=fmt, dpi=dpi, facecolor="#FFFFFF", metadata=_meta)
+    fig.savefig(out_path, format=fmt, dpi=dpi, facecolor=PAPER, metadata=_meta,
+                    bbox_inches='tight', pad_inches=PAD_IN)
     return out_path
 
 

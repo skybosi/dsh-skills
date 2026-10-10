@@ -91,7 +91,9 @@ def do_list(category=None):
         return
     if bs is None:
         print('⚠️  B 类（Matplotlib 数据图）当前不可用：未安装 matplotlib/numpy（%s）' % err)
-        print('    安装：python3 -m venv .venv && .venv/bin/pip install matplotlib numpy')
+        _pip = 'Scripts\\pip.exe' if os.name == 'nt' else 'bin/pip'
+        _py = 'python' if os.name == 'nt' else 'python3'
+        print('    安装：%s -m venv .venv && .venv/%s install matplotlib numpy' % (_py, _pip))
     print('方案模板（完整真实方案图，可直接抄改）：--example tech-flow / tech-arch / tech-swimlane')
     print('选型：python3 draw.py --recommend "用一句话描述你要画的图"')
     print('骨架：python3 draw.py --example <图型>    目录：python3 draw.py --catalog --json')
@@ -432,7 +434,7 @@ def do_doctor():
     print('  numpy             %s %s' % (mods['numpy'] or '未安装 → pip install numpy', ok(mods['numpy'])))
     print('  Pillow（webp）     %s %s' % (mods['PIL'] or '未安装 → pip install Pillow（可选：只影响 webp 输出）', ok(mods['PIL'])))
     print('  Node.js           %s %s' % (node_v or '未安装', ok(bool(node))))
-    print('  Playwright 模块    %s' % ('可用' if pw else '未找到 → npm i -g playwright 或设 PW_MODULES'))
+    print('  Playwright 模块    %s' % ('可用' if pw else '未找到 → npm i playwright 或设 PW_MODULES'))
     print('  Chromium 浏览器    %s' % ('见 PLAYWRIGHT_BROWSERS_PATH' if pw else '→ npx playwright install chromium'))
     print('  mermaid 运行时      %s' % ('已内置' if mermaid else '缺失'))
     print('  B 类图型数         %s' % ('%d 种' % len(bs) if bs is not None else '不可用（缺 matplotlib）'))
