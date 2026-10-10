@@ -1,11 +1,24 @@
 {
- "id": "calc-ch3-f01",
+ "id": "research-surface3d",
  "type": "surface3d",
- "output": "out/calc-ch3-f01.svg",
+ "output": "out/research-surface3d.svg",
  "params": {
-  "title": "二元函数 z=x²+y² 的等高线图（碗形曲面）",
+  "title": "三维曲面 z = x² + 0.6y² + 0.8xy",
+  "func": "X**2 + 0.6*Y**2 + 0.8*X*Y",
+  "x_min": -3,
+  "x_max": 3,
+  "y_min": -3,
+  "y_max": 3,
+  "n": 60,
+  "cmap": "blue",
+  "colorbar": true,
+  "colorbar_label": "z",
+  "view": [
+   26,
+   -58
+  ],
   "xlabel": "x",
   "ylabel": "y",
-  "func": "X**2 + Y**2"
+  "zlabel": "z"
  }
 }

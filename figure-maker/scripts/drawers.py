@@ -11,10 +11,11 @@
 import math
 
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.patches import Circle, Rectangle
-
+# ⚠️ 必须**先**导入 style：它在模块顶层设置 MPLCONFIGDIR（否则 matplotlib 会去写 ~/.matplotlib，
+#    在沙箱里直接报 “not a writable directory” 并退化到临时目录重建字体缓存）。
 from style import SOFT_COLORS, soft, new_fig, save, check_layout, report_and_exit, INK
+import matplotlib.pyplot as plt
+from matplotlib.patches import Circle, Rectangle, Polygon
 
 # 允许在 manifest 的 func 表达式里出现的名字（安全求值，不用 eval 裸跑）
 _MATH = {
@@ -40,9 +41,28 @@ def _eval_func(expr, xs):
     return eval(compile(expr, "<func>", "eval"), {"__builtins__": {}}, env)  # noqa: S307（白名单环境）
 
 
+def _soft_cmap(name="blue"):
+    """连续软色板（白→浅→主色→深），色标**只用规范色板里的颜色**，不用 matplotlib 默认色图。"""
+    from matplotlib.colors import LinearSegmentedColormap
+    ramps = {
+        "blue":      ["#FFFFFF", "#DBEAFE", SOFT_COLORS["blue"], SOFT_COLORS["purple"]],
+        "warm":      ["#FFFFFF", "#FEF3C7", SOFT_COLORS["orange"], SOFT_COLORS["red"]],
+        "green":     ["#FFFFFF", "#D1FAE5", SOFT_COLORS["green"], SOFT_COLORS["dark"]],
+        "grey":      ["#FFFFFF", "#F1F3F5", SOFT_COLORS["grey"], SOFT_COLORS["dark"]],
+        "diverging": [SOFT_COLORS["blue"], "#FFFFFF", SOFT_COLORS["orange"]],
+    }
+    key = name if name in ramps else "blue"
+    return LinearSegmentedColormap.from_list("soft_" + key, ramps[key])
+
+
 def _finish(fig, out_path, checks_path=None):
-    chk = check_layout(fig)
-    save(fig, out_path)
+    import warnings
+    with warnings.catch_warnings():
+        # matplotlib 对「figure.autolayout + gridspec（KM/校准/多面板）」会警告 tight_layout 可能不准。
+        # 我们紧接着就用 check_layout() 在**像素空间实测**文字位置 —— 比这条警告可靠得多，所以只静音这一条。
+        warnings.filterwarnings("ignore", message=".*not compatible with tight_layout.*")
+        chk = check_layout(fig)
+        save(fig, out_path)
     plt.close(fig)
     return chk
 
@@ -118,23 +138,27 @@ def draw_twin_axis(p, out_path, width_in=8.0, height_in=4.5):
     fig, ax = new_fig(width_in, height_in)
     bx = np.asarray(p.get("bar_x", []), dtype=float); by = np.asarray(p.get("bar_y", []), dtype=float)
     lx = np.asarray(p.get("line_x", []), dtype=float); ly = np.asarray(p.get("line_y", []), dtype=float)
+    bar_label = p.get("bar_label") or p.get("label_left") or "柱（左轴）"
+    line_label = p.get("line_label") or p.get("label_right") or "线（右轴）"
     ax.bar(bx, by, width=(bx[1] - bx[0]) * 0.55 if len(bx) > 1 else 2,
-           color=SOFT_COLORS["blue"], edgecolor=SOFT_COLORS["blue"], label="写成本（条）")
-    ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel("写成本", color=INK["axis"])
+           color=SOFT_COLORS["blue"], edgecolor=SOFT_COLORS["blue"], label=bar_label)
+    ax.set_xlabel(p.get("xlabel", ""))
+    ax.set_ylabel(p.get("ylabel_left") or p.get("ylabel") or bar_label, color=INK["axis"])
     ax2 = ax.twinx()
     ax2.spines["top"].set_visible(False)
     ax2.plot(lx, ly, color=SOFT_COLORS["red"], linewidth=2.2, marker="o", markersize=4.5,
-             markerfacecolor="white", markeredgewidth=1.4, label="损失成本（线）")
-    ax2.set_ylabel("损失成本", color=INK["axis"])
+             markerfacecolor="white", markeredgewidth=1.4, label=line_label)
+    ax2.set_ylabel(p.get("ylabel_right") or line_label, color=INK["axis"])
     ax2.grid(False)
 
-    # 交点：仅当两条曲线在采样点上交叉/最接近处标注（数据来自 manifest，不臆造）
-    if len(bx) == len(lx) and len(by) == len(ly):
+    # 「两轴最接近点」只在**显式要求**时标注：两条轴量纲不同，跨轴比大小本身没有意义
+    # （老版本默认就标「交点约 f=…」，样例里给出的是毫无意义的 f=0）。需要时给 mark_crossing: true。
+    if p.get("mark_crossing") and len(bx) == len(lx) and len(by) == len(ly):
         k = int(np.argmin(np.abs(by - ly)))
         # ⚠️ 不要用 annotate+arrowprops：实测其 Text bbox 会退化成高 13000+px（越界误报+重叠）
         ax2.scatter([lx[k]], [ly[k]], s=90, facecolor="none", edgecolor=SOFT_COLORS["red"],
                     linewidth=2, zorder=5)
-        ax2.text(0.98, 0.06, "交点约 f=%g" % lx[k], transform=ax2.transAxes,
+        ax2.text(0.98, 0.06, "%s=%g 处两轴最接近" % (p.get("xlabel") or "x", lx[k]), transform=ax2.transAxes,
                  fontsize=10.5, color=INK["axis"], ha="right", va="bottom")
     # 顶部留余量：右轴最上面的刻度标签贴着画布上沿时会顶出去（实测溢出 11px）
     ax.set_ylim(0, float(max(by.max(), 1)) * 1.14)
@@ -147,27 +171,46 @@ def draw_twin_axis(p, out_path, width_in=8.0, height_in=4.5):
 
 # -------------------------------------------------------------------- heatmap
 def draw_heatmap(p, out_path, width_in=8.0, height_in=4.5):
+    """二维强度图：计数 / 相关性 / 注意力 / 混淆都能画。
+
+    ⚠️ 老版本把色阶写死成 `vmin=0, vmax=1` 的二值色板 —— 传 0~10 的计数矩阵时
+    值 2 和值 8 会渲染成**完全相同的颜色**（色阶信息全丢）；y 轴刻度还写死成「写事务 N」。
+    现在：色阶按数据取值域、轴标签由参数给、默认不留硬编码文案。
+    """
     data = np.asarray(p.get("data", []), dtype=float)
-    labels = list(p.get("labels", []))
+    if not data.size:
+        raise SystemExit("heatmap 无 data")
     fig, ax = new_fig(width_in, height_in)
-    cmap = matplotlib_colors = None
-    from matplotlib.colors import ListedColormap
-    cmap = ListedColormap(["#F8FBFF", SOFT_COLORS["blue"]])
-    im = ax.imshow(data, cmap=cmap, vmin=0, vmax=1, aspect="auto")
-    ax.set_xticks(range(len(labels))); ax.set_xticklabels(labels)
+    lo = float(p.get("vmin", np.min(data))); hi = float(p.get("vmax", np.max(data)))
+    if hi <= lo:
+        hi = lo + 1.0
+    cmap_key = p.get("cmap") or ("diverging" if lo < 0 else "blue")
+    im = ax.imshow(data, cmap=_soft_cmap(cmap_key), vmin=lo, vmax=hi, aspect="auto")
+    x_labels = list(p.get("x_labels") or p.get("labels") or [])
+    y_labels = list(p.get("y_labels") or [])
+    ax.set_xticks(range(data.shape[1]))
+    if x_labels:
+        ax.set_xticklabels([str(x) for x in x_labels])
     ax.set_yticks(range(data.shape[0]))
-    ax.set_yticklabels(["写事务 %d" % (i + 1) for i in range(data.shape[0])])
-    for i in range(data.shape[0]):
-        for j in range(data.shape[1]):
-            ax.text(j, i, str(int(data[i, j])), ha="center", va="center",
-                    fontsize=11, color=INK["text"])
+    if y_labels:
+        ax.set_yticklabels([str(x) for x in y_labels])
+    if p.get("annot", True):
+        fmt = p.get("annot_fmt") or ("%g" if float(np.max(np.abs(data))) >= 10 or lo < 0 else "%.2f")
+        fs = max(8.0, min(11.0, 130.0 / max(data.shape)))
+        for i in range(data.shape[0]):
+            for j in range(data.shape[1]):
+                ax.text(j, i, fmt % data[i, j], ha="center", va="center", fontsize=fs, color=INK["text"])
     ax.set_title(p.get("title", ""), pad=12)
-    ax.set_ylabel("写入者")
+    ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
     ax.grid(False)
-    ax.set_xticks(np.arange(-0.5, len(labels), 1), minor=True)
+    ax.set_xticks(np.arange(-0.5, data.shape[1], 1), minor=True)
     ax.set_yticks(np.arange(-0.5, data.shape[0], 1), minor=True)
     ax.grid(which="minor", color="#FFFFFF", linewidth=1.6)
     ax.tick_params(which="minor", length=0)
+    if p.get("colorbar"):
+        cb = fig.colorbar(im, ax=ax, shrink=0.9, pad=0.02)
+        cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=11)
+        cb.outline.set_edgecolor("#E2E8F0")
     return _finish(fig, out_path)
 
 
@@ -212,7 +255,7 @@ def draw_grouped_bar(p, out_path, width_in=8.0, height_in=4.5):
                 off = vmax * (0.02 if gi % 2 == 0 else 0.06)
                 ax.text(xi, float(v) + off, ("%.2f" % v).rstrip("0").rstrip("."),
                         ha="center", va="bottom", fontsize=10, color=INK["tick"])
-    ax.set_xticks(x); _tick_labels(ax, cats, width_in)
+    ax.set_xticks(x); _tick_labels(ax, cats)          # 用实际轴宽
     # 值域要同时容纳正负（原来只按 max 算，负值柱的标注会掉到画布外）
     allv = [float(v) for g in groups for v in g.get("values", [])] or [0.0]
     lo, hi = min(0.0, min(allv)), max(0.0, max(allv))
@@ -275,11 +318,16 @@ def _wrap_cjk(text, per_line=12):
     return "\n".join(out)
 
 
-def _tick_labels(ax, labels, axes_width_in=7.0):
+def _tick_labels(ax, labels, axes_width_in=None):
     """刻度标签防挤压：按**子图宽度**算步长（每标签约需 26px），不够就抽稀 + 旋转。
 
     之前固定「每 2 个留 1 个」，在 20+ 柱子的窄子图里仍然互相重叠（实测 64 对）。
     """
+    if axes_width_in is None:
+        try:
+            axes_width_in = float(ax.figure.get_size_inches()[0])
+        except Exception:
+            axes_width_in = 7.0
     n = len(labels)
     longest = max((sum(14.0 if ord(ch) > 0x2E80 else 7.6 for ch in str(lb)) for lb in labels), default=20)
     max_labels = max(2, int(axes_width_in * 96 / max(18.0, longest + 10)))   # 按最长标签宽度算
@@ -334,11 +382,13 @@ def _labels_on_bars(ax, xs, vals, fmt="%.2f", thresh=12, cats_hint=None, force_i
 
 def draw_bar(p, out_path, width_in=8.0, height_in=4.5):
     vals = [float(v) for v in p.get("values", [])]
-    labels = [str(x) for x in p.get("labels", [])] or [str(i + 1) for i in range(len(vals))]
+    # labels 是正式键；categories 只是别名 —— 以前文档里的示例写 categories 会被**静默忽略**
+    # （刻度变成 1/2/3），这里做兼容，两种写法都对。
+    labels = [str(x) for x in (p.get("labels") or p.get("categories") or [])] or [str(i + 1) for i in range(len(vals))]
     fig, ax = new_fig(max(width_in, 0.75 * len(vals) + 1.0), height_in)
     xs = np.arange(len(vals))
     ax.bar(xs, vals, width=0.62, color=SOFT_COLORS["blue"], edgecolor=SOFT_COLORS["blue"])
-    ax.set_xticks(xs); _tick_labels(ax, labels, width_in)
+    ax.set_xticks(xs); _tick_labels(ax, labels)      # 用实际轴宽（图会被自动加宽）
     ax.set_ylabel(p.get("ylabel", "")); ax.set_xlabel(p.get("xlabel", ""))
     lo, hi = min(0.0, min(vals) if vals else 0.0), max(0.0, max(vals) if vals else 1.0)
     sp = (hi - lo) or 1.0
@@ -391,7 +441,7 @@ def draw_stacked_bar(p, out_path, width_in=8.0, height_in=4.5):
                                                            SOFT_COLORS["orange"], SOFT_COLORS["purple"]][i % 4]
         ax.bar(xs, v, bottom=bottom, width=0.6, color=col, edgecolor=col, label=s.get("label", ""))
         bottom = bottom + v
-    ax.set_xticks(xs); _tick_labels(ax, cats, width_in)
+    ax.set_xticks(xs); _tick_labels(ax, cats)         # 用实际轴宽
     ax.set_ylabel(p.get("ylabel", "")); ax.set_title(p.get("title", ""), pad=12)
     _h, _l = ax.get_legend_handles_labels()
     _legend_below(fig, ax, _h, _l, ncol=min(len(series), 4), bottom=0.30)
@@ -620,8 +670,19 @@ def draw_heatmap_panels(p, out_path, width_in=8.0, height_in=4.5):
         last = ax.imshow(np.asarray(pn.get("data", []), dtype=float), cmap=cmap, aspect="auto")
         ax.set_title(pn.get("title", ""), fontsize=11.5, pad=8)
         ax.grid(False)
-        for lbl in pn.get("labels", [])[:0]:
-            pass
+        # ⚠️ 以前这里是一段 `for lbl in pn.get("labels", [])[:0]: pass` 的空切片死循环：
+        #    面板标签被静默忽略。现在真正把它们写到刻度上。
+        xl = list(pn.get("x_labels") or pn.get("labels") or [])
+        yl = list(pn.get("y_labels") or [])
+        if xl:
+            ax.set_xticks(range(len(xl))); ax.set_xticklabels([str(x) for x in xl], fontsize=9)
+        if yl:
+            ax.set_yticks(range(len(yl))); ax.set_yticklabels([str(y) for y in yl], fontsize=9)
+        if pn.get("values") is not None and p.get("annot"):
+            d = np.asarray(pn.get("data", []), dtype=float)
+            for i in range(d.shape[0]):
+                for j in range(d.shape[1]):
+                    ax.text(j, i, "%g" % d[i, j], ha="center", va="center", fontsize=8, color=INK["text"])
     for j in range(n, rows * ncols):
         axes[j // ncols][j % ncols].axis("off")
     if p.get("colorbar") and last is not None:
@@ -739,9 +800,11 @@ def draw_roofline(p, out_path, width_in=8.0, height_in=4.5):
     for i, pt in enumerate(p.get("points", [])):
         ax.scatter(float(pt.get("intensity", 1)), float(pt.get("flops", 1)), s=52,
                    color=SOFT_COLORS["blue"], edgecolor="white", linewidth=0.9, zorder=3)
-        off = (8, 8) if i % 2 == 0 else (8, -16)
+        # 对数轴上相邻点的标签很容易撞在一起 → 四向轮换 + 按方向对齐（原来只有上下两向）
+        off = [(10, 16), (10, -30), (-10, 16), (-10, -30)][i % 4]   # 偏移要够大，对数轴上小偏移仍会压
         ax.annotate(pt.get("label", ""), (float(pt.get("intensity", 1)), float(pt.get("flops", 1))),
-                    textcoords="offset points", xytext=off, fontsize=10, color=INK["axis"])
+                    textcoords="offset points", xytext=off, fontsize=10, color=INK["axis"],
+                    ha="left" if off[0] > 0 else "right")
     ax.set_xscale("log"); ax.set_yscale("log")
     ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
     ax.set_title(p.get("title", ""), pad=12)
@@ -1100,4 +1163,1065 @@ DRAWERS.update({
     "scatter_matrix": draw_scatter_matrix, "regularization_path": draw_regularization_path,
     "scatter_rich": draw_scatter_rich, "tensor_blocks": draw_tensor_blocks,
     "matrix_mul_panels": draw_matrix_mul_panels, "tensor_cube_panels": draw_tensor_cube_panels,
+})
+
+
+# =====================================================================================
+# 第四批：科研 / 研发图型
+#   规范与前三批一致：只用 SOFT_COLORS 取色、去顶右框、极浅虚线网格、无阴影渐变；
+#   文字只放数据坐标或轴坐标；返回 style.check_layout() 结果供 --check 与 meta 使用。
+#   随机性一律用固定种子（default_rng(7)），保证「同一 spec 出同一张图」。
+# =====================================================================================
+
+_CYCLE = ("blue", "green", "orange", "purple", "red", "grey", "dark")
+
+
+def _cyc(i, key=None):
+    """按语义循环取软色板颜色（同义同色）。"""
+    return soft(key) if key else SOFT_COLORS[_CYCLE[i % len(_CYCLE)]]
+
+
+def _band(ax, x, lo, hi, color, alpha=0.20):
+    """波动带 / 置信带（均值 ± std、CI 区间统一走这里）。"""
+    ax.fill_between(x, lo, hi, color=color, alpha=alpha, linewidth=0, zorder=2)
+
+
+def _metric_box(ax, pairs, loc="upper left", fontsize=10):
+    """把指标（R²/MAE/ECE/N…）写进图内固定角落，避免压数据。"""
+    txt = "\n".join("%s = %s" % (k, v) for k, v in pairs)
+    pos = {"upper left": (0.02, 0.98, "left", "top"), "upper right": (0.98, 0.98, "right", "top"),
+           "lower right": (0.98, 0.04, "right", "bottom"), "lower left": (0.02, 0.04, "left", "bottom")}[loc]
+    ax.text(pos[0], pos[1], txt, transform=ax.transAxes, ha=pos[2], va=pos[3], fontsize=fontsize,
+            color=INK["axis"], linespacing=1.5,
+            bbox=dict(boxstyle="round,pad=0.35", facecolor="#FFFFFF", edgecolor="#E2E8F0",
+                      linewidth=0.8, alpha=0.92))
+
+
+def _tag_panels(axes, tags=None):
+    """论文组图的面板标签 (a)(b)(c)…（左上角、加粗）。"""
+    letters = "abcdefghijklmnopqrstuvwxyz"
+    for i, ax in enumerate(axes):
+        t = tags[i] if tags and i < len(tags) else "(%s)" % letters[i % 26]
+        ax.text(-0.02, 1.06, t, transform=ax.transAxes, ha="left", va="bottom",
+                fontsize=11, fontweight="bold", color=INK["title"])
+
+
+def _eval_func2(expr, X, Y):
+    """二维表达式（等高线/曲面）：X、Y（也接受小写 x、y）都在白名单环境里。"""
+    env = dict(_MATH)
+    env["X"] = env["x"] = X
+    env["Y"] = env["y"] = Y
+    return eval(compile(expr, "<func2>", "eval"), {"__builtins__": {}}, env)  # noqa: S307（白名单）
+
+
+def _series_xy(s, i):
+    """统一解析一条 series 的 (x, mean, std)。支持 mean/std、seeds（多次实验）、lo/hi。"""
+    y = s.get("mean") or s.get("y") or s.get("values")
+    if y is None and s.get("seeds"):
+        arr = np.asarray(s["seeds"], dtype=float)
+        y = arr.mean(axis=0)
+        if s.get("std") is None:
+            s = dict(s); s["std"] = arr.std(axis=0, ddof=1) if arr.shape[0] > 1 else np.zeros(arr.shape[1])
+    if y is None:
+        raise SystemExit("series 需要 mean/y/values 或 seeds")
+    y = np.asarray(y, dtype=float)
+    x = np.asarray(s.get("x"), dtype=float) if s.get("x") is not None else np.arange(len(y))
+    return x, y
+
+
+def draw_line_band(p, out_path, width_in=8.0, height_in=4.5):
+    """均值 ± 波动带（多 seed / 多次实验 / 置信区间）——论文里最常见的曲线画法。
+
+    params: x[] · series[{label, mean[]|y[]|seeds[[…]], std[]|lo[]|hi[], color}] · xlabel · ylabel
+    """
+    fig, ax = new_fig(width_in, height_in)
+    for i, s in enumerate(p.get("series", [])):
+        col = _cyc(i, s.get("color"))
+        x, y = _series_xy(s, i)
+        n = min(len(x), len(y))
+        x, y = x[:n], y[:n]
+        lo = hi = None
+        if s.get("std") is not None:
+            sd = np.asarray(s["std"], dtype=float)[:n]
+            lo, hi = y - sd, y + sd
+        elif s.get("lo") is not None and s.get("hi") is not None:
+            lo, hi = np.asarray(s["lo"], dtype=float)[:n], np.asarray(s["hi"], dtype=float)[:n]
+        if lo is not None:
+            _band(ax, x, lo, hi, col)
+        ax.plot(x, y, color=col, linewidth=2.2, label=s.get("label", ""))
+        if not p.get("no_markers") and n <= 24:
+            ax.plot(x, y, linestyle="none", marker="o", markersize=4.5, markerfacecolor="white",
+                    markeredgecolor=col, markeredgewidth=1.4)
+    if p.get("logx"):
+        ax.set_xscale("log")
+    if p.get("logy"):
+        ax.set_yscale("log")
+    ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
+    ax.set_title(p.get("title", ""), pad=12)
+    if any(s.get("label") for s in p.get("series", [])):
+        ax.legend(loc=p.get("legend", "best"), fontsize=10)
+    return _finish(fig, out_path)
+
+
+def draw_errorbar(p, out_path, width_in=8.0, height_in=4.5):
+    """均值 ± 误差棒：kind='bar'（默认分组柱）或 'line'（折线带误差）。
+
+    params: labels/categories[] · groups[{label, values[], errors[], color}] · ylabel · kind
+    """
+    cats = [str(c) for c in (p.get("labels") or p.get("categories") or [])]
+    groups = p.get("groups", [])
+    if not groups:
+        raise SystemExit("errorbar 需要 groups[{label, values, errors}]")
+    if not cats:
+        cats = [str(i + 1) for i in range(len(groups[0].get("values", [])))]
+    kind = p.get("kind", "bar")
+    xs = np.arange(len(cats))
+    if kind == "line":
+        fig, ax = new_fig(width_in, height_in)
+        for i, g in enumerate(groups):
+            col = _cyc(i, g.get("color"))
+            v = np.asarray(g.get("values", []), dtype=float)
+            e = np.asarray(g.get("errors", np.zeros_like(v)), dtype=float)
+            ax.errorbar(xs[:len(v)], v, yerr=e, color=col, linewidth=2.2, marker="o", markersize=5,
+                        markerfacecolor="white", markeredgewidth=1.4, capsize=4, label=g.get("label", ""))
+    else:
+        fig, ax = new_fig(max(width_in, 0.8 * len(cats) * max(1, len(groups)) + 1.5), height_in)
+        n = len(groups); w = 0.8 / max(1, n)
+        for i, g in enumerate(groups):
+            col = _cyc(i, g.get("color"))
+            v = np.asarray(g.get("values", []), dtype=float)
+            e = np.asarray(g.get("errors", np.zeros_like(v)), dtype=float)
+            ax.bar(xs[:len(v)] - 0.4 + w * (i + 0.5), v, width=w * 0.92, color=col, edgecolor=col,
+                   yerr=e, capsize=3, error_kw=dict(ecolor=INK["tick"], linewidth=1.1),
+                   label=g.get("label", ""))
+    ax.set_xticks(xs); _tick_labels(ax, cats)
+    ax.set_ylabel(p.get("ylabel", "")); ax.set_xlabel(p.get("xlabel", ""))
+    if kind != "line":
+        vals = [float(v) for g in groups for v in g.get("values", [])] or [1.0]
+        base = float(p.get("y_min", 0.0))
+        ax.set_ylim(base, max(vals) * 1.30)          # 顶部留白给图例，柱子从 0（或指定值）起
+    ax.set_title(p.get("title", ""), pad=12)
+    if any(g.get("label") for g in groups):
+        ax.legend(loc=p.get("legend", "upper left"), ncol=min(len(groups), 4), fontsize=10)
+    return _finish(fig, out_path)
+
+
+def draw_parity(p, out_path, width_in=8.0, height_in=4.5):
+    """预测 vs 实测（parity plot）+ y=x 参考线 + R²/MAE/RMSE —— 回归类论文标配。
+
+    params: predicted[] · actual[] · groups[{label, predicted[], actual[], color}] · log
+    """
+    fig, ax = new_fig(width_in, height_in)
+    groups = p.get("groups") or [{"label": p.get("label", "样本"), "predicted": p.get("predicted", []),
+                                  "actual": p.get("actual", [])}]
+    allp, alla = [], []
+    for i, g in enumerate(groups):
+        col = _cyc(i, g.get("color"))
+        pr = np.asarray(g.get("predicted", []), dtype=float)
+        ac = np.asarray(g.get("actual", []), dtype=float)
+        n = min(len(pr), len(ac)); pr, ac = pr[:n], ac[:n]
+        ax.scatter(ac, pr, s=42, color=col, edgecolor="white", linewidth=0.8, zorder=3,
+                   label=g.get("label", ""))
+        allp.append(pr); alla.append(ac)
+    pr = np.concatenate(allp) if allp else np.array([])
+    ac = np.concatenate(alla) if alla else np.array([])
+    if len(pr):
+        lo, hi = float(min(pr.min(), ac.min())), float(max(pr.max(), ac.max()))
+        pad = (hi - lo) * 0.06 or 1.0
+        lo, hi = lo - pad, hi + pad
+        ax.plot([lo, hi], [lo, hi], color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.4,
+                label="y = x", zorder=2)
+        ax.set_xlim(lo, hi); ax.set_ylim(lo, hi); ax.set_aspect("equal")
+        if p.get("log"):
+            ax.set_xscale("log"); ax.set_yscale("log")
+        rmse = float(np.sqrt(np.mean((pr - ac) ** 2)))
+        mae = float(np.mean(np.abs(pr - ac)))
+        sst = float(np.sum((ac - ac.mean()) ** 2)) or 1e-12
+        r2 = 1.0 - float(np.sum((pr - ac) ** 2)) / sst
+        unit = (" " + p["unit"]) if p.get("unit") else ""
+        _metric_box(ax, [("N", "%d" % len(pr)), ("R²", "%.4f" % r2),
+                         ("MAE", "%.3g%s" % (mae, unit)), ("RMSE", "%.3g%s" % (rmse, unit))],
+                    loc=p.get("metrics_loc", "upper left"))
+    ax.set_xlabel(p.get("xlabel", "实测值")); ax.set_ylabel(p.get("ylabel", "预测值"))
+    ax.set_title(p.get("title", ""), pad=12)
+    if any(g.get("label") for g in groups):
+        ax.legend(loc="lower right", fontsize=10)
+    return _finish(fig, out_path)
+
+
+def draw_calibration(p, out_path, width_in=8.0, height_in=4.5):
+    """校准 / 可靠性曲线（模型置信度 vs 实际正确率）+ ECE，可选下方样本量柱。
+
+    params: bins[{conf, acc, count}] 或 conf[]/acc[]/counts[] · show_hist（默认 true）
+    """
+    bins = list(p.get("bins") or [])
+    if not bins:
+        conf = p.get("conf") or p.get("confs") or []
+        acc = p.get("acc") or p.get("accs") or []
+        cnt = p.get("count") or p.get("counts") or [1] * len(conf)
+        bins = [{"conf": c, "acc": a, "count": n} for c, a, n in zip(conf, acc, cnt)]
+    if not bins:
+        raise SystemExit("calibration 需要 bins 或 conf/acc 序列")
+    conf = np.array([float(b.get("conf", b.get("confidence", 0))) for b in bins])
+    acc = np.array([float(b.get("acc", b.get("accuracy", 0))) for b in bins])
+    cnt = np.array([float(b.get("count", 1)) for b in bins])
+    show_hist = p.get("show_hist", True)
+    if show_hist:
+        fig, axes = plt.subplots(2, 1, figsize=(width_in, height_in), sharex=True,
+                                 gridspec_kw=dict(height_ratios=[3, 1], hspace=0.12))
+        ax, axh = axes[0], axes[1]
+    else:
+        fig, ax = new_fig(width_in, height_in); axh = None
+    w = 0.9 / max(1, len(conf))
+    ax.bar(conf, acc, width=w, color=SOFT_COLORS["blue"], edgecolor="#FFFFFF", linewidth=0.8,
+           zorder=2, label="实际正确率")
+    ax.plot([0, 1], [0, 1], color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.4,
+            zorder=3, label="理想校准")
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.set_ylabel(p.get("ylabel", "实际正确率"))
+    ax.set_title(p.get("title", ""), pad=12)
+    ax.legend(loc="upper left", fontsize=10)
+    total = float(cnt.sum()) or 1.0
+    ece = float(np.sum(cnt / total * np.abs(acc - conf)))
+    mce = float(np.max(np.abs(acc - conf)))
+    _metric_box(ax, [("ECE", "%.4f" % ece), ("MCE", "%.4f" % mce), ("N", "%d" % int(total))],
+                loc=p.get("metrics_loc", "lower right"))
+    if axh is not None:
+        axh.bar(conf, cnt, width=w, color=SOFT_COLORS["grey"], edgecolor="#FFFFFF", linewidth=0.6)
+        axh.set_ylabel("样本量", fontsize=10)
+        axh.set_xlabel(p.get("xlabel", "预测置信度"))
+    else:
+        ax.set_xlabel(p.get("xlabel", "预测置信度"))
+    return _finish(fig, out_path)
+
+
+def draw_confusion(p, out_path, width_in=8.0, height_in=4.5):
+    """混淆矩阵：normalize='row'（默认，行归一化）/ 'all' / 'none'，可显示各类准确率。
+
+    params: matrix[[…]] · labels[] · normalize · annot_fmt · cmap · colorbar
+    """
+    m = np.asarray(p.get("matrix", p.get("data", [])), dtype=float)
+    if not m.size:
+        raise SystemExit("confusion 需要 matrix")
+    labels = [str(x) for x in p.get("labels", [])] or [str(i + 1) for i in range(m.shape[0])]
+    mode = p.get("normalize", "row")
+    if mode == "row":
+        denom = m.sum(axis=1, keepdims=True); z = m / np.where(denom == 0, 1, denom)
+    elif mode == "all":
+        z = m / (m.sum() or 1)
+    else:
+        z = m
+    fig, ax = new_fig(width_in, height_in)
+    im = ax.imshow(z, cmap=_soft_cmap(p.get("cmap", "blue")), vmin=0, vmax=float(z.max()) or 1, aspect="auto")
+    fmt = p.get("annot_fmt") or ("%.2f" if mode != "none" else "%g")
+    for i in range(m.shape[0]):
+        for j in range(m.shape[1]):
+            v = z[i, j]
+            ax.text(j, i, fmt % v, ha="center", va="center", fontsize=10,
+                    color="#FFFFFF" if v > 0.6 * (z.max() or 1) else INK["text"])
+    ax.set_xticks(range(len(labels))); ax.set_xticklabels(labels, rotation=30, ha="right", fontsize=10)
+    ax.set_yticks(range(m.shape[0])); ax.set_yticklabels(labels, fontsize=10)
+    ax.set_xlabel(p.get("xlabel", "预测")); ax.set_ylabel(p.get("ylabel", "真实"))
+    ax.set_title(p.get("title", ""), pad=12)
+    ax.grid(False)
+    if mode == "row":
+        accs = np.diag(z)
+        acc = float(np.average(accs, weights=[max(1.0, float(v)) for v in m.sum(axis=1)]))
+        note = "准确率 %.4f ｜ 宏平均召回 %.4f" % (acc, float(accs.mean()))
+        # 指标默认写进标题行：塞进图内会与角落格子的数值互相压（实测 overlap=1）
+        if p.get("metrics_in_figure"):
+            _metric_box(ax, [("准确率", "%.4f" % acc), ("宏平均召回", "%.4f" % float(accs.mean()))],
+                        loc=p.get("metrics_loc", "lower right"), fontsize=9)
+        else:
+            ax.set_title((p.get("title", "") + " ｜ " + note).strip(" ｜"), pad=12)
+    if p.get("colorbar"):
+        cb = fig.colorbar(im, ax=ax, shrink=0.9, pad=0.02)
+        cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=11)
+        cb.outline.set_edgecolor("#E2E8F0")
+    return _finish(fig, out_path)
+
+
+def draw_violin(p, out_path, width_in=8.0, height_in=4.5):
+    """小提琴图（分布形态对比），可叠原始散点与箱线。
+
+    params: groups[{label, data[]|values[], color}] · ylabel · show_points · show_box
+    """
+    groups = p.get("groups", [])
+    if not groups:
+        raise SystemExit("violin 需要 groups[{label, data}]")
+    fig, ax = new_fig(width_in, height_in)
+    data = [np.asarray(g.get("data", g.get("values", [])), dtype=float) for g in groups]
+    pos = np.arange(1, len(data) + 1)
+    vp = ax.violinplot(data, positions=pos, widths=0.72, showextrema=False, showmedians=False)
+    for i, body in enumerate(vp["bodies"]):
+        col = _cyc(i, groups[i].get("color"))
+        body.set_facecolor(col); body.set_edgecolor(col); body.set_alpha(0.55); body.set_linewidth(1.2)
+    if p.get("show_box", True):
+        bp = ax.boxplot(data, positions=pos, widths=0.12, patch_artist=True, showfliers=False,
+                        medianprops=dict(color=INK["text"], linewidth=1.3),
+                        whiskerprops=dict(color=SOFT_COLORS["grey"]),
+                        capprops=dict(color=SOFT_COLORS["grey"]))
+        for b in bp["boxes"]:
+            b.set_facecolor("#FFFFFF"); b.set_edgecolor(SOFT_COLORS["grey"])
+    if p.get("show_points"):
+        rng = np.random.default_rng(7)                      # 固定种子 → 图可复现
+        for i, d in enumerate(data):
+            if not len(d):
+                continue
+            ax.scatter(pos[i] + rng.uniform(-0.12, 0.12, len(d)), d, s=12, alpha=0.55,
+                       color=SOFT_COLORS["dark"], edgecolor="none", zorder=4)
+    ax.set_xticks(pos); _tick_labels(ax, [str(g.get("label", i + 1)) for i, g in enumerate(groups)])
+    ax.set_ylabel(p.get("ylabel", "")); ax.set_xlabel(p.get("xlabel", ""))
+    ax.set_title(p.get("title", ""), pad=12)
+    return _finish(fig, out_path)
+
+
+DRAWERS.update({
+    "line_band": draw_line_band, "errorbar": draw_errorbar, "parity": draw_parity,
+    "calibration": draw_calibration, "confusion": draw_confusion, "violin": draw_violin,
+})
+
+
+def draw_ecdf(p, out_path, width_in=8.0, height_in=4.5):
+    """经验累积分布（ECDF）：不对分布形态做任何假设，直接比多组数据。
+
+    params: series/groups[{label, data[]|values[], color}] · xlabel · ylabel · mark_quantiles[]
+    """
+    groups = p.get("series") or p.get("groups") or []
+    if not groups:
+        raise SystemExit("ecdf 需要 series/groups[{label, data}]")
+    fig, ax = new_fig(width_in, height_in)
+    for i, g in enumerate(groups):
+        col = _cyc(i, g.get("color"))
+        d = np.sort(np.asarray(g.get("data", g.get("values", [])), dtype=float))
+        if not len(d):
+            continue
+        y = np.arange(1, len(d) + 1) / len(d)
+        ax.step(d, y, where="post", color=col, linewidth=2.2, label=g.get("label", ""))
+        if p.get("show_points") and len(d) <= 60:
+            ax.plot(d, y, linestyle="none", marker="o", markersize=3.4, color=col, alpha=0.7)
+    for q in (p.get("mark_quantiles") or []):
+        ax.axhline(float(q), color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.0)
+        ax.text(ax.get_xlim()[0], float(q), " P%d" % round(float(q) * 100), fontsize=9,
+                color=INK["tick"], va="bottom", ha="left")
+    ax.set_ylim(0, 1.02)
+    ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", "累积概率 F(x)"))
+    ax.set_title(p.get("title", ""), pad=12)
+    ax.legend(loc=p.get("legend", "lower right"), fontsize=10)
+    return _finish(fig, out_path)
+
+
+def draw_radar(p, out_path, width_in=8.0, height_in=4.5):
+    """雷达图（多指标多方案对比）：轴按维度均分，默认从正上方顺时针。
+
+    params: axes[] · series[{label, values[], color, fill}] · ymax · fill
+    """
+    labels = [str(a) for a in p.get("axes", [])]
+    series = p.get("series", [])
+    if not labels or not series:
+        raise SystemExit("radar 需要 axes[] 与 series[{label, values}]")
+    fig, ax = plt.subplots(subplot_kw=dict(polar=True), figsize=(width_in, height_in))
+    ang = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+    ang += ang[:1]
+    ax.set_theta_offset(np.pi / 2); ax.set_theta_direction(-1)
+    vmax = 0.0
+    for i, s in enumerate(series):
+        col = _cyc(i, s.get("color"))
+        v = np.asarray(s.get("values", []), dtype=float)
+        if len(v) != len(labels):
+            raise SystemExit("radar：series[%d].values 长度(%d) 必须等于 axes 数量(%d)" % (i, len(v), len(labels)))
+        vmax = max(vmax, float(v.max()))
+        vv = np.concatenate([v, v[:1]])
+        ax.plot(ang, vv, color=col, linewidth=2.0, label=s.get("label", ""), zorder=3)
+        if s.get("fill", p.get("fill", True)):
+            ax.fill(ang, vv, color=col, alpha=0.16, zorder=2)
+    top = float(p.get("ymax") or 0) or (vmax * 1.15 or 1.0)
+    ax.set_ylim(0, top)
+    ax.set_yticks([top * 0.25, top * 0.5, top * 0.75])
+    # 环形刻度标签会和轴标签抢位置（实测 overlap=1）→ 不标数字，只在角落给出量程
+    ax.set_yticklabels([])
+    ax.text(0.995, -0.03, "量程 0–%.3g" % top, transform=ax.transAxes, ha="right", va="top",
+            fontsize=9.5, color=INK["tick"])
+    ax.set_xticks(ang[:-1]); ax.set_xticklabels(labels, fontsize=10.5, color=INK["text"])
+    ax.grid(color="#F1F3F5", linewidth=0.8)
+    ax.spines["polar"].set_color("#E2E8F0")
+    ax.set_title(p.get("title", ""), pad=22)
+    if any(s.get("label") for s in series):
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.10), ncol=min(len(series), 3),
+                  fontsize=10, frameon=False)
+    return _finish(fig, out_path)
+
+
+def draw_flamegraph(p, out_path, width_in=8.0, height_in=4.5):
+    """火焰图：把层级耗时画成「宽度=占比、深度=调用层级」的堆叠矩形。
+
+    params: stacks[{name, value, children[]}] 或 folded["a;b;c 12", …] · max_depth · min_label_ratio
+    """
+    def from_folded(lines):
+        root = {"name": "all", "value": 0.0, "children": {}}
+        for line in lines:
+            line = str(line).strip()
+            if not line:
+                continue
+            parts = line.rsplit(" ", 1)
+            if len(parts) != 2:
+                continue
+            path, val = [s for s in parts[0].split(";") if s], float(parts[1])
+            root["value"] += val
+            node = root
+            for seg in path:
+                node = node["children"].setdefault(seg, {"name": seg, "value": 0.0, "children": {}})
+                node["value"] += val
+        return root
+
+    if p.get("folded"):
+        root = from_folded(p["folded"])
+    elif p.get("stacks"):
+        def norm(n, idx=0):
+            kids = {("%s#%d" % (c.get("name", ""), i)): norm(c, i) for i, c in enumerate(n.get("children") or [])}
+            val = float(n.get("value", 0) or 0) or sum(k["value"] for k in kids.values())
+            return {"name": str(n.get("name", "")), "value": val, "children": kids}
+        root = {"name": "all", "value": sum(float(s.get("value", 0)) for s in p["stacks"]),
+                "children": {("%s#%d" % (s.get("name", ""), i)): norm(s, i) for i, s in enumerate(p["stacks"])}}
+    else:
+        raise SystemExit("flamegraph 需要 stacks 或 folded")
+    total = root["value"] or 1.0
+    frames = []
+
+    def layout(node, x0, depth):
+        frames.append((node["name"], x0, node["value"], depth))
+        kids = sorted(node["children"].values(), key=lambda k: -k["value"])
+        cx = x0
+        for c in kids:
+            layout(c, cx, depth + 1)
+            cx += c["value"]
+    layout(root, 0.0, 0)
+    max_depth = max(f[3] for f in frames) if frames else 1
+    fig, ax = new_fig(width_in, max(height_in, 0.42 * (max_depth + 1) + 1.2))
+    ax.set_xlim(0, total); ax.set_ylim(max_depth + 1.15, -0.15)
+    ax.axis("off")
+    depth_cols = ["blue", "green", "orange", "purple", "grey", "red", "dark"]
+    min_ratio = float(p.get("min_label_ratio", 0.03))
+    for name, x0, w, d in frames:
+        if d == 0 and p.get("hide_root", True):
+            continue
+        col = SOFT_COLORS[depth_cols[(d - 1) % len(depth_cols)]]
+        ax.add_patch(Rectangle((x0, d), w, 0.86, facecolor=col, edgecolor="#FFFFFF", linewidth=0.7))
+        if w / total >= min_ratio and name:
+            label = str(name)
+            if len(label) > max(4, int(w / total * 46)):
+                label = label[:max(4, int(w / total * 46)) - 1] + "…"
+            ax.text(x0 + w / 2, d + 0.43, label, ha="center", va="center", fontsize=8.5,
+                    color=INK["text"], clip_on=True)
+    ax.set_title(p.get("title", ""), pad=12)
+    if p.get("show_total", True):
+        ax.text(0, max_depth + 0.7, "总样本 %.4g" % root["value"], ha="left", va="center",
+                fontsize=9.5, color=INK["tick"])
+    return _finish(fig, out_path)
+
+
+def draw_panels(p, out_path, width_in=8.0, height_in=4.5):
+    """论文组图：多面板 + (a)(b)(c) 标签 + 可选共享轴（每格可以是 line/bar/scatter/area）。
+
+    params: panels[{kind, title, x, y, values, labels, series[], xlabel, ylabel, color, legend}] ·
+            ncols · tags[] · sharex · sharey · each_in
+    """
+    panels = p.get("panels", [])
+    if not panels:
+        raise SystemExit("panels 需要 panels[]")
+    n = len(panels)
+    ncols = int(p.get("ncols") or (n if n <= 3 else 3))
+    rows = int(np.ceil(n / ncols))
+    fig, axes = plt.subplots(rows, ncols, squeeze=False, sharex=bool(p.get("sharex")), sharey=bool(p.get("sharey")),
+                             figsize=(_panel_width(ncols, each=float(p.get("each_in", 3.0))),
+                                      height_in * rows * (1.05 if rows == 1 else 1.25)))
+    flat = [axes[i][j] for i in range(rows) for j in range(ncols)]
+    for i, pn in enumerate(panels):
+        ax = flat[i]
+        kind = pn.get("kind", "line")
+        col = _cyc(i, pn.get("color"))
+        if kind == "bar":
+            vals = [float(v) for v in pn.get("values", [])]
+            labs = [str(x) for x in (pn.get("labels") or pn.get("categories") or [])] or [str(k + 1) for k in range(len(vals))]
+            ax.bar(np.arange(len(vals)), vals, width=0.62, color=col, edgecolor=col)
+            ax.set_xticks(np.arange(len(vals))); _tick_labels(ax, labs, 3.0)
+        elif kind == "scatter":
+            ax.scatter(pn.get("x", []), pn.get("y", []), s=28, color=col, edgecolor="white", linewidth=0.7)
+        elif kind == "area":
+            xs = np.asarray(pn.get("x", []), dtype=float); ys = np.asarray(pn.get("y", []), dtype=float)
+            ax.plot(xs, ys, color=col, linewidth=2.0)
+            ax.fill_between(xs, ys, float(ys.min()) if len(ys) else 0, color=col, alpha=0.22)
+        else:
+            x = np.asarray(pn.get("x", []), dtype=float)
+            if pn.get("series"):
+                for si, s in enumerate(pn["series"]):
+                    sc = _cyc(si, s.get("color"))
+                    ax.plot(np.asarray(s.get("x", x), dtype=float), s.get("y", []), color=sc,
+                            linewidth=2.0, label=s.get("label", ""))
+                if pn.get("legend", True):
+                    ax.legend(fontsize=9, loc="best")
+            else:
+                ax.plot(x, pn.get("y", []), color=col, linewidth=2.0)
+            if pn.get("logx"):
+                ax.set_xscale("log")
+            if pn.get("logy"):
+                ax.set_yscale("log")
+        ax.set_title(pn.get("title", ""), fontsize=11, pad=6)
+        if pn.get("xlabel"):
+            ax.set_xlabel(pn["xlabel"], fontsize=10)
+        if pn.get("ylabel"):
+            ax.set_ylabel(pn["ylabel"], fontsize=10)
+        ax.grid(pn.get("grid", True))
+    for j in range(n, len(flat)):
+        flat[j].axis("off")
+    _tag_panels(flat[:n], p.get("tags"))
+    _suptitle(fig, p.get("title", ""))
+    return _finish(fig, out_path)
+
+
+def draw_waterfall(p, out_path, width_in=8.0, height_in=4.5):
+    """瀑布图：从起点逐项累加的增量分解（特征贡献 / 成本归因 / 预算变化）。
+
+    params: items[{label, value}] · start · show_total · ylabel · value_fmt
+    """
+    items = p.get("items", [])
+    if not items:
+        raise SystemExit("waterfall 需要 items[{label, value}]")
+    labels = [str(it.get("label", "")) for it in items]
+    vals = [float(it.get("value", 0)) for it in items]
+    show_total = p.get("show_total", True)
+    start = float(p.get("start", 0.0))
+    fmt = p.get("value_fmt", "%.3g")
+    n = len(vals) + (1 if show_total else 0)
+    fig, ax = new_fig(max(width_in, 1.15 * n + 1.2), height_in)
+    run = start
+    lows, highs = [0.0], [] 
+    for i, v in enumerate(vals):
+        bottom = run if v >= 0 else run + v
+        ax.bar(i, v, bottom=bottom, width=0.62, color=(SOFT_COLORS["green"] if v >= 0 else SOFT_COLORS["red"]),
+               edgecolor="#FFFFFF", linewidth=0.8)
+        if i:
+            ax.plot([i - 1 + 0.31, i - 0.31], [run, run], color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.0, zorder=1)
+        lows.append(min(bottom, bottom + v)); highs.append(max(bottom, bottom + v))
+        run += v
+    span = (max(highs + [run, 0.0]) - min(lows + [run, 0.0])) or 1.0
+    run2 = start
+    for i, v in enumerate(vals):
+        top = run2 + v if v >= 0 else run2
+        ax.text(i, top + span * 0.02 if v >= 0 else top - span * 0.02, fmt % v, ha="center",
+                va="bottom" if v >= 0 else "top", fontsize=9.5, color=INK["tick"])
+        run2 += v
+    if show_total:
+        ax.bar(n - 1, run, width=0.62, color=SOFT_COLORS["dark"], edgecolor="#FFFFFF", linewidth=0.8)
+        ax.text(n - 1, run + span * 0.02, fmt % run, ha="center", va="bottom", fontsize=9.5, color=INK["tick"])
+        labels = labels + [p.get("total_label", "总计")]
+    ax.axhline(0, color=INK["tick"], linewidth=0.8)
+    ax.set_xticks(np.arange(n)); _tick_labels(ax, labels)
+    ax.set_ylabel(p.get("ylabel", ""))
+    ax.set_ylim(min(lows + [0.0, run]) - span * 0.10, max(highs + [0.0, run]) + span * 0.16)
+    ax.set_title(p.get("title", ""), pad=12)
+    return _finish(fig, out_path)
+
+
+def draw_contourf(p, out_path, width_in=8.0, height_in=4.5):
+    """填充等高线（z=f(x,y)）：二维表达曲面 / 损失景观 / 参数扫描，比 3D 更易读。
+
+    params: func（表达式，变量 X/Y 或 x/y）或 data[][] · x_min/x_max/y_min/y_max · levels · colorbar
+    """
+    x0 = float(p.get("x_min", -3)); x1 = float(p.get("x_max", 3))
+    y0 = float(p.get("y_min", -3)); y1 = float(p.get("y_max", 3))
+    n = int(p.get("n", 120))
+    xs = np.linspace(x0, x1, n); ys = np.linspace(y0, y1, n)
+    X, Y = np.meshgrid(xs, ys)
+    if p.get("data") is not None:
+        Z = np.asarray(p["data"], dtype=float)
+        X, Y = np.meshgrid(np.linspace(x0, x1, Z.shape[1]), np.linspace(y0, y1, Z.shape[0]))
+    else:
+        Z = np.asarray(_eval_func2(p.get("func", "X**2 + Y**2"), X, Y), dtype=float)
+    fig, ax = new_fig(width_in, height_in)
+    levels = int(p.get("levels", 12))
+    cf = ax.contourf(X, Y, Z, levels=levels, cmap=_soft_cmap(p.get("cmap", "blue")))
+    if p.get("lines", True):
+        ax.contour(X, Y, Z, levels=levels, colors="#FFFFFF", linewidths=0.5, alpha=0.55)
+    if p.get("mark_min"):
+        k = int(np.argmin(Z)); ax.scatter([X.ravel()[k]], [Y.ravel()[k]], s=70, marker="*",
+                                          color=SOFT_COLORS["red"], edgecolor="white", linewidth=0.8, zorder=5)
+        ax.text(X.ravel()[k], Y.ravel()[k], " min=%.4g" % Z.ravel()[k], fontsize=9.5, color=INK["text"], va="bottom")
+    ax.set_xlabel(p.get("xlabel", "x")); ax.set_ylabel(p.get("ylabel", "y"))
+    ax.set_title(p.get("title", ""), pad=12)
+    if p.get("colorbar", True):
+        cb = fig.colorbar(cf, ax=ax, shrink=0.92, pad=0.02)
+        cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=11)
+        cb.outline.set_edgecolor("#E2E8F0")
+    return _finish(fig, out_path)
+
+
+DRAWERS.update({
+    "ecdf": draw_ecdf, "radar": draw_radar, "flamegraph": draw_flamegraph,
+    "panels": draw_panels, "waterfall": draw_waterfall, "contourf": draw_contourf,
+})
+
+
+def draw_spectrum(p, out_path, width_in=8.0, height_in=4.5):
+    """信号 / 频谱 / 谱图：可直接给 (freq, 幅值)，也可给时域 signal + sample_rate 自动 FFT。
+
+    params: x/freq[] · y/amplitude[] ｜ 或 signal[] + sample_rate · top_peaks（自动标峰值）· logy
+    """
+    if p.get("signal") is not None:
+        sig = np.asarray(p["signal"], dtype=float)
+        fs = float(p.get("sample_rate", len(sig)))
+        n = len(sig)
+        f = np.fft.rfftfreq(n, d=1.0 / fs)
+        A = np.abs(np.fft.rfft(sig - sig.mean())) * 2.0 / max(1, n)
+    else:
+        f = np.asarray(p.get("x", p.get("freq", [])), dtype=float)
+        A = np.asarray(p.get("y", p.get("amplitude", [])), dtype=float)
+    if not len(f) or not len(A):
+        raise SystemExit("spectrum 需要 x/y 或 signal")
+    fig, ax = new_fig(width_in, height_in)
+    col = soft(p.get("color")) if p.get("color") else SOFT_COLORS["blue"]
+    ax.plot(f, A, color=col, linewidth=1.8)
+    if p.get("fill"):
+        ax.fill_between(f, A, 0, color=col, alpha=0.18, linewidth=0)
+    topk = int(p.get("top_peaks", 0))
+    if topk > 0 and len(A) >= 3:
+        idx = [i for i in range(1, len(A) - 1) if A[i] > A[i - 1] and A[i] >= A[i + 1]]
+        idx.sort(key=lambda i: -A[i])
+        for i in idx[:topk]:
+            ax.annotate("%.4g @ %.4g" % (A[i], f[i]), xy=(f[i], A[i]), xytext=(0, 9),
+                        textcoords="offset points", ha="center", fontsize=9, color=INK["axis"])
+            ax.scatter([f[i]], [A[i]], s=28, facecolor="none", edgecolor=SOFT_COLORS["red"], linewidth=1.4, zorder=4)
+    if p.get("logy"):
+        ax.set_yscale("log")
+    if p.get("logx"):
+        ax.set_xscale("log")
+    ax.set_xlabel(p.get("xlabel", "频率")); ax.set_ylabel(p.get("ylabel", "幅值"))
+    ax.set_title(p.get("title", ""), pad=12)
+    return _finish(fig, out_path)
+
+
+def draw_residual(p, out_path, width_in=8.0, height_in=4.5):
+    """残差诊断图：残差 vs 拟合值 + 0 线 + ±2σ（异方差 / 系统性偏差一眼看出）。
+
+    params: fitted[] · residual[] ｜ 或 x[]+y[]+slope+intercept（自动算）· sigma · band
+    """
+    fitted = p.get("fitted"); resid = p.get("residual")
+    if resid is None:
+        x = np.asarray(p.get("x", []), dtype=float); y = np.asarray(p.get("y", []), dtype=float)
+        if not len(x) or not len(y):
+            raise SystemExit("residual 需要 fitted/residual 或 x/y(+slope/intercept)")
+        k = float(p.get("slope", 1)); b = float(p.get("intercept", 0))
+        fitted = k * x + b
+        resid = y - np.asarray(fitted, dtype=float)
+    fitted = np.asarray(fitted, dtype=float); resid = np.asarray(resid, dtype=float)
+    sigma = float(p.get("sigma") or (resid.std(ddof=1) if len(resid) > 1 else 1.0)) or 1.0
+    fig, ax = new_fig(width_in, height_in)
+    if p.get("band", True):
+        ax.axhspan(-2 * sigma, 2 * sigma, color=SOFT_COLORS["blue"], alpha=0.10, zorder=1)
+    ax.axhline(0, color=INK["tick"], linewidth=1.0, zorder=2)
+    for kk, ls in ((2, "--"), (3, ":")):
+        ax.axhline(kk * sigma, color=SOFT_COLORS["grey"], linestyle=ls, linewidth=1.0, zorder=2)
+        ax.axhline(-kk * sigma, color=SOFT_COLORS["grey"], linestyle=ls, linewidth=1.0, zorder=2)
+    ax.scatter(fitted, resid, s=40, color=SOFT_COLORS["blue"], edgecolor="white", linewidth=0.8, zorder=3)
+    inside = float(np.mean(np.abs(resid) <= 2 * sigma)) if len(resid) else 0.0
+    _metric_box(ax, [("N", "%d" % len(resid)), ("σ", "%.3g" % sigma),
+                     ("±2σ 内", "%.1f%%" % (inside * 100))], loc=p.get("metrics_loc", "upper right"))
+    ax.set_xlabel(p.get("xlabel", "拟合值")); ax.set_ylabel(p.get("ylabel", "残差"))
+    ax.set_title(p.get("title", ""), pad=12)
+    return _finish(fig, out_path)
+
+
+def draw_fit_band(p, out_path, width_in=8.0, height_in=4.5):
+    """散点 + 拟合线 + 置信/预测带（论文里比单纯一条拟合线更严谨）。
+
+    params: x[] · y[] · band[{x, lo, hi}] ｜ 或 slope/intercept/se/t（解析生成带）· log
+    """
+    x = np.asarray(p.get("x", []), dtype=float); y = np.asarray(p.get("y", []), dtype=float)
+    if not len(x) or not len(y):
+        raise SystemExit("fit_band 需要 x/y")
+    fig, ax = new_fig(width_in, height_in)
+    ax.scatter(x, y, s=42, color=SOFT_COLORS["blue"], edgecolor="white", linewidth=0.8, zorder=3,
+               label=p.get("label", "样本"))
+    band = p.get("band") or {}
+    col = soft(p.get("color")) if p.get("color") else SOFT_COLORS["red"]
+    if band:
+        bx = np.asarray(band.get("x", []), dtype=float)
+        ax.plot(bx, band.get("y", band.get("fit", [])), color=col, linewidth=2.2, zorder=4)
+        if band.get("lo") is not None and band.get("hi") is not None:
+            _band(ax, bx, np.asarray(band["lo"], dtype=float), np.asarray(band["hi"], dtype=float), col)
+    else:
+        k = float(p.get("slope", 1)); b = float(p.get("intercept", 0))
+        bx = np.linspace(x.min(), x.max(), 120)
+        yhat = k * bx + b
+        ax.plot(bx, yhat, color=col, linewidth=2.2, zorder=4, label="拟合 y=%.3gx+%.3g" % (k, b))
+        if p.get("se") is not None:
+            t = float(p.get("t", 1.96)); xbar = x.mean(); sxx = float(np.sum((x - xbar) ** 2)) or 1e-12
+            half = t * float(p["se"]) * np.sqrt(1.0 / len(x) + (bx - xbar) ** 2 / sxx)
+            _band(ax, bx, yhat - half, yhat + half, col)
+    if p.get("log"):
+        ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
+    ax.set_title(p.get("title", ""), pad=12)
+    ax.legend(loc=p.get("legend", "best"), fontsize=10)
+    return _finish(fig, out_path)
+
+
+def draw_box_jitter(p, out_path, width_in=8.0, height_in=4.5):
+    """箱线 + 原始散点抖动：小样本时**必须**这样画，否则箱线会掩盖真实分布。
+
+    params: groups[{label, data[]|values[], color}] · ylabel · jitter · show_box
+    """
+    groups = p.get("groups", [])
+    if not groups:
+        raise SystemExit("box_jitter 需要 groups[{label, data}]")
+    fig, ax = new_fig(width_in, height_in)
+    data = [np.asarray(g.get("data", g.get("values", [])), dtype=float) for g in groups]
+    pos = np.arange(1, len(data) + 1)
+    if p.get("show_box", True):
+        bp = ax.boxplot(data, positions=pos, widths=0.5, patch_artist=True, showfliers=False,
+                        medianprops=dict(color=INK["text"], linewidth=1.4),
+                        whiskerprops=dict(color=SOFT_COLORS["grey"]),
+                        capprops=dict(color=SOFT_COLORS["grey"]))
+        for i, box in enumerate(bp["boxes"]):
+            c = _cyc(i, groups[i].get("color"))
+            box.set_facecolor(c); box.set_edgecolor(c); box.set_alpha(0.45)
+    rng = np.random.default_rng(7)                     # 固定种子 → 可复现
+    jit = float(p.get("jitter", 0.14))
+    for i, d in enumerate(data):
+        if not len(d):
+            continue
+        ax.scatter(pos[i] + rng.uniform(-jit, jit, len(d)), d, s=float(p.get("size", 16)),
+                   color=SOFT_COLORS["dark"], alpha=0.55, edgecolor="none", zorder=4)
+    ax.set_xticks(pos); _tick_labels(ax, [str(g.get("label", i + 1)) for i, g in enumerate(groups)])
+    ax.set_ylabel(p.get("ylabel", "")); ax.set_xlabel(p.get("xlabel", ""))
+    ax.set_title(p.get("title", ""), pad=12)
+    return _finish(fig, out_path)
+
+
+def draw_km(p, out_path, width_in=8.0, height_in=4.5):
+    """Kaplan-Meier 生存曲线（含删失标记与可选风险表）。
+
+    params: groups[{label, times[], events[]（1=事件 0=删失）, color}] · at_risk（默认 true）·
+            risk_times[] · xlabel · ylabel
+    """
+    groups = p.get("groups", [])
+    if not groups:
+        raise SystemExit("km 需要 groups[{label, times, events}]")
+    curves = []
+    for g in groups:
+        t = np.asarray(g.get("times", []), dtype=float)
+        e = np.asarray(g.get("events", np.ones_like(t)), dtype=float)
+        order = np.argsort(t); t, e = t[order], e[order]
+        xs, ys = [0.0], [1.0]
+        s = 1.0
+        for tu in np.unique(t):
+            mask = t == tu
+            d = int(np.sum(e[mask] == 1)); r = int(np.sum(t >= tu))
+            if d > 0 and r > 0:
+                s *= 1.0 - d / r
+                xs.append(float(tu)); ys.append(s)
+        curves.append((g, np.asarray(xs), np.asarray(ys)))
+    show_risk = p.get("at_risk", True)
+    if show_risk:
+        fig, axes = plt.subplots(2, 1, figsize=(width_in, height_in), sharex=True,
+                                 gridspec_kw=dict(height_ratios=[3.2, 1], hspace=0.12))
+        ax, axr = axes[0], axes[1]
+    else:
+        fig, ax = new_fig(width_in, height_in); axr = None
+    tmax = 0.0
+    for i, (g, xs, ys) in enumerate(curves):
+        col = _cyc(i, g.get("color"))
+        ax.step(xs, ys, where="post", color=col, linewidth=2.2, label=g.get("label", ""))
+        tmax = max(tmax, float(xs[-1]) if len(xs) else 0.0)
+        # 删失标记：在删失时刻的生存概率处画一条小竖线
+        tt = np.asarray(g.get("times", []), dtype=float)
+        ee = np.asarray(g.get("events", np.ones_like(tt)), dtype=float)
+        for tc in tt[ee == 0]:
+            sv = float(ys[max(0, np.searchsorted(xs, tc, side="right") - 1)])
+            ax.plot([tc, tc], [sv, sv + 0.03], color=col, linewidth=1.2, zorder=4)
+        if len(xs) > 1 and g.get("median", True):
+            below = np.where(ys <= 0.5)[0]
+            if len(below):
+                ax.plot([0, xs[below[0]]], [0.5, 0.5], color=col, linestyle=":", linewidth=1.0, alpha=0.7)
+                ax.plot([xs[below[0]], xs[below[0]]], [0, 0.5], color=col, linestyle=":", linewidth=1.0, alpha=0.7)
+    ax.set_ylim(0, 1.02); ax.set_ylabel(p.get("ylabel", "生存概率"))
+    ax.set_title(p.get("title", ""), pad=12)
+    ax.legend(loc=p.get("legend", "lower left"), fontsize=10)
+    if axr is not None:
+        rts = p.get("risk_times") or list(np.linspace(0, tmax, 5))
+        ng = max(1, len(curves))
+        base_w = (rts[1] - rts[0]) * 0.72 if len(rts) > 1 else max(1.0, tmax * 0.12)
+        w = base_w / ng
+        show_n = ng * len(rts) <= 12
+        for i, (g, _xs, _ys) in enumerate(curves):
+            tt = np.asarray(g.get("times", []), dtype=float)
+            counts = [int(np.sum(tt >= rt)) for rt in rts]
+            col = _cyc(i, g.get("color"))
+            xpos = np.asarray(rts, dtype=float) + (i - (ng - 1) / 2.0) * w   # 多组必须错开
+            axr.bar(xpos, counts, width=w * 0.86, color=col, alpha=0.75,
+                    edgecolor="#FFFFFF", linewidth=0.6, label=g.get("label", ""))
+            if show_n:
+                for xp, c in zip(xpos, counts):
+                    axr.text(xp, c, "%d" % c, ha="center", va="bottom", fontsize=8, color=INK["tick"])
+        axr.set_ylabel("风险人数", fontsize=10)
+        axr.set_ylim(0, max(1, max(int(np.sum(np.asarray(g2.get("times", []), dtype=float) >= 0))
+                                   for g2 in groups)) * 1.35)
+        axr.set_xlabel(p.get("xlabel", "时间"))
+    else:
+        ax.set_xlabel(p.get("xlabel", "时间"))
+    return _finish(fig, out_path)
+
+
+def draw_forest(p, out_path, width_in=8.0, height_in=4.5):
+    """森林图：效应量 + 置信区间（可带汇总菱形），适合 meta 分析 / 亚组对比。
+
+    params: items[{label, estimate, lo, hi}] · null（默认 1）· log · summary{estimate, lo, hi} · annotate
+    """
+    items = p.get("items", [])
+    if not items:
+        raise SystemExit("forest 需要 items[{label, estimate, lo, hi}]")
+    labels = [str(it.get("label", "")) for it in items]
+    est = np.array([float(it.get("estimate", 0)) for it in items])
+    lo = np.array([float(it.get("lo", it.get("estimate", 0))) for it in items])
+    hi = np.array([float(it.get("hi", it.get("estimate", 0))) for it in items])
+    summ = p.get("summary")
+    n = len(items) + (1 if summ else 0)
+    fig, ax = new_fig(width_in, max(2.4, 0.42 * n + 1.4))
+    ys = np.arange(len(items))[::-1]
+    for i, yy in enumerate(ys):
+        col = _cyc(i) if p.get("color_each") else SOFT_COLORS["blue"]
+        ax.plot([lo[i], hi[i]], [yy, yy], color=col, linewidth=1.8, zorder=2)
+        ax.scatter([est[i]], [yy], s=60, color=col, edgecolor="white", linewidth=0.9, zorder=3)
+        if p.get("annotate", True):
+            ax.text(hi.max() + (hi.max() - lo.min()) * 0.04, yy,
+                    "%.3g [%.3g, %.3g]" % (est[i], lo[i], hi[i]), va="center", fontsize=9, color=INK["axis"])
+    null = float(p.get("null", 1.0))
+    ax.axvline(null, color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.2, zorder=1)
+    if summ:
+        sy = -1.0
+        poly = [[float(summ.get("lo", summ.get("estimate", 0))), sy],
+                [float(summ.get("estimate", 0)), sy + 0.32],
+                [float(summ.get("hi", summ.get("estimate", 0))), sy],
+                [float(summ.get("estimate", 0)), sy - 0.32]]
+        ax.add_patch(Polygon(poly, closed=True, facecolor=SOFT_COLORS["purple"],
+                             edgecolor=SOFT_COLORS["purple"], alpha=0.85, zorder=3))
+        ys = np.append(ys, sy); labels = labels + [p.get("summary_label", "合并效应")]
+    ax.set_yticks(ys); ax.set_yticklabels(labels, fontsize=10)
+    ax.axhline(ys.min() - 0.6, color="#E2E8F0", linewidth=0.8)
+    ax.set_ylim(ys.min() - 0.9, ys.max() + 0.6)
+    if p.get("log", True):
+        ax.set_xscale("log")
+    ax.set_xlabel(p.get("xlabel", "效应量（OR / HR，95% CI）"))
+    ax.set_title(p.get("title", ""), pad=12)
+    return _finish(fig, out_path)
+
+
+def draw_volcano(p, out_path, width_in=8.0, height_in=4.5):
+    """火山图：差异表达 / 差异分析（log2FC vs −log10 p）。
+
+    params: log2fc[] · pvalue[] · fc_threshold · p_threshold · label_top · names[]
+    """
+    fc = np.asarray(p.get("log2fc", p.get("fc", [])), dtype=float)
+    pv = np.asarray(p.get("pvalue", p.get("p", [])), dtype=float)
+    if not len(fc) or not len(pv):
+        raise SystemExit("volcano 需要 log2fc 与 pvalue")
+    y = -np.log10(np.clip(pv, 1e-300, None))
+    fct = float(p.get("fc_threshold", 1.0)); pt = float(p.get("p_threshold", 0.05))
+    up = (fc >= fct) & (pv <= pt); dn = (fc <= -fct) & (pv <= pt); ns = ~(up | dn)
+    fig, ax = new_fig(width_in, height_in)
+    ax.scatter(fc[ns], y[ns], s=26, color=SOFT_COLORS["grey"], alpha=0.65, edgecolor="none", label="不显著")
+    ax.scatter(fc[dn], y[dn], s=32, color=SOFT_COLORS["blue"], alpha=0.85, edgecolor="white", linewidth=0.4, label="下调")
+    ax.scatter(fc[up], y[up], s=32, color=SOFT_COLORS["red"], alpha=0.85, edgecolor="white", linewidth=0.4, label="上调")
+    ax.axhline(-np.log10(pt), color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.0)
+    ax.axvline(fct, color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.0)
+    ax.axvline(-fct, color=SOFT_COLORS["grey"], linestyle="--", linewidth=1.0)
+    names = list(p.get("names") or [])
+    topk = int(p.get("label_top", 0))
+    if topk and names:
+        score = np.where(up | dn, y * np.abs(fc), -1.0)
+        offs = [(6, 5), (6, -13), (-6, 5), (-6, -13), (6, 15), (-6, 15)]
+        for rank, i in enumerate(np.argsort(-score)[:topk]):
+            dx, dy = offs[rank % len(offs)]
+            ax.annotate(str(names[i]), (fc[i], y[i]), xytext=(dx, dy), textcoords="offset points",
+                        ha="left" if dx > 0 else "right", fontsize=9, color=INK["axis"])
+    ax.set_xlabel(p.get("xlabel", "log2 fold change")); ax.set_ylabel(p.get("ylabel", "−log10 p"))
+    ax.set_title(p.get("title", ""), pad=12)
+    # 图例默认放左下：右上角是上调点 + 基因名标注的地盘（实测会压住标签）
+    ax.legend(loc=p.get("legend", "lower left"), fontsize=10)
+    return _finish(fig, out_path)
+
+
+def _cluster_order(mat):
+    """平均连接层次聚类，返回叶序（纯 numpy 实现，不依赖 scipy）。"""
+    n = len(mat)
+    if n < 3:
+        return list(range(n))
+    D = {i: {} for i in range(n)}
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = float(np.linalg.norm(mat[i] - mat[j]))
+            D[i][j] = d; D[j][i] = d
+    members = {i: [i] for i in range(n)}
+    active = list(range(n)); nxt = n
+    while len(active) > 1:
+        best = None
+        for ai in range(len(active)):
+            for bi in range(ai + 1, len(active)):
+                a, b = active[ai], active[bi]
+                d = D[a][b]
+                if best is None or d < best[0]:
+                    best = (d, a, b)
+        _, a, b = best
+        members[nxt] = members[a] + members[b]
+        D.setdefault(nxt, {})
+        for k in active:
+            if k in (a, b):
+                continue
+            d = 0.5 * (D[a][k] + D[b][k])          # 平均连接（UPGMA）
+            D[nxt][k] = d; D[k][nxt] = d
+        active = [k for k in active if k not in (a, b)] + [nxt]
+        nxt += 1
+    return members[active[0]]
+
+
+def draw_clustered_heatmap(p, out_path, width_in=8.0, height_in=4.5):
+    """表达矩阵热图：可 z-score、可按层次聚类重排行列（聚类只重排，不画树）。
+
+    params: data[][] · row_labels[] · col_labels[] · zscore（'row'|'none'）· cluster（'rows'|'both'|'none'）· colorbar
+    """
+    d = np.asarray(p.get("data", []), dtype=float)
+    if not d.size:
+        raise SystemExit("clustered_heatmap 需要 data[][]")
+    mode = p.get("zscore", "row")
+    if mode == "row":
+        mu = d.mean(axis=1, keepdims=True); sd = d.std(axis=1, keepdims=True)
+        z = (d - mu) / np.where(sd == 0, 1, sd)
+    elif mode == "col":
+        mu = d.mean(axis=0, keepdims=True); sd = d.std(axis=0, keepdims=True)
+        z = (d - mu) / np.where(sd == 0, 1, sd)
+    else:
+        z = d
+    cl = p.get("cluster", "rows")
+    rows = list(range(z.shape[0])); cols = list(range(z.shape[1]))
+    if cl in ("rows", "both"):
+        rows = _cluster_order(z)
+    if cl == "both":
+        cols = _cluster_order(z.T)
+    z = z[np.ix_(rows, cols)]
+    row_labels = [str(x) for x in p.get("row_labels", [])]
+    col_labels = [str(x) for x in p.get("col_labels", [])]
+    row_labels = [row_labels[i] for i in rows] if len(row_labels) == d.shape[0] else []
+    col_labels = [col_labels[i] for i in cols] if len(col_labels) == d.shape[1] else []
+    fig, ax = new_fig(width_in, height_in)
+    v = float(np.max(np.abs(z))) or 1.0
+    im = ax.imshow(z, cmap=_soft_cmap(p.get("cmap", "diverging")), vmin=-v, vmax=v, aspect="auto")
+    ax.set_xticks(range(z.shape[1]))
+    if col_labels:
+        ax.set_xticklabels(col_labels, rotation=45, ha="right", fontsize=9)
+    ax.set_yticks(range(z.shape[0]))
+    if row_labels:
+        ax.set_yticklabels(row_labels, fontsize=9)
+    ax.grid(False)
+    ax.set_title(p.get("title", ""), pad=12)
+    ax.set_xlabel(p.get("xlabel", "")); ax.set_ylabel(p.get("ylabel", ""))
+    if p.get("colorbar", True):
+        cb = fig.colorbar(im, ax=ax, shrink=0.9, pad=0.02)
+        cb.set_label(p.get("colorbar_label", "z-score" if mode != "none" else ""), color=INK["axis"], fontsize=11)
+        cb.outline.set_edgecolor("#E2E8F0")
+    return _finish(fig, out_path)
+
+
+def _prep_3d(ax, p):
+    """3D 轴统一去灰底、浅网格（默认 3D 会带一块难看的灰背景）。
+
+    3D 投影后刻度文字很容易互相压，所以刻度数量压到 ≤4 个、字号降到 9。
+    """
+    from matplotlib.ticker import MaxNLocator
+    for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+        axis.pane.set_facecolor((1.0, 1.0, 1.0, 1.0))
+        axis.pane.set_edgecolor("#E2E8F0")
+        axis.set_major_locator(MaxNLocator(4))
+    ax.tick_params(labelsize=9)
+    try:                                     # 收缩 3D 盒子：投影后的刻度文字最容易顶出画布
+        ax.set_box_aspect(None, zoom=float(p.get("zoom", 0.86)))
+    except Exception:
+        pass
+    ax.grid(True, color="#F1F3F5", linewidth=0.8)
+    if p.get("view"):
+        ax.view_init(elev=float(p["view"][0]), azim=float(p["view"][1]))
+
+
+def _grid_xyz(p):
+    x0 = float(p.get("x_min", -3)); x1 = float(p.get("x_max", 3))
+    y0 = float(p.get("y_min", -3)); y1 = float(p.get("y_max", 3))
+    n = int(p.get("n", 60))
+    X, Y = np.meshgrid(np.linspace(x0, x1, n), np.linspace(y0, y1, n))
+    if p.get("data") is not None:
+        Z = np.asarray(p["data"], dtype=float)
+    else:
+        Z = np.asarray(_eval_func2(p.get("func", "X**2 + Y**2"), X, Y), dtype=float)
+    return X, Y, Z
+
+
+def draw_surface3d(p, out_path, width_in=8.0, height_in=4.5):
+    """三维曲面 z=f(x,y)。**可选图型**：默认规范用 contourf 做二维表达，需要立体感时再用它。
+
+    params: func（X/Y 表达式）或 data[][] · x_min/x_max/y_min/y_max · cmap · wireframe · view[elev, azim]
+    """
+    X, Y, Z = _grid_xyz(p)
+    fig = plt.figure(figsize=(width_in, height_in))
+    ax = fig.add_subplot(111, projection="3d")
+    cmap = _soft_cmap(p.get("cmap", "blue"))
+    if p.get("wireframe"):
+        ax.plot_wireframe(X, Y, Z, color=SOFT_COLORS["blue"], linewidth=0.6, rstride=2, cstride=2)
+        mappable = None
+    else:
+        mappable = ax.plot_surface(X, Y, Z, cmap=cmap, linewidth=0, antialiased=True,
+                                   alpha=float(p.get("alpha", 0.96)))
+    _prep_3d(ax, p)
+    ax.set_xlabel(p.get("xlabel", "x")); ax.set_ylabel(p.get("ylabel", "y"))
+    ax.set_zlabel(p.get("zlabel", "z"))
+    ax.set_title(p.get("title", ""), pad=10)
+    if mappable is not None and p.get("colorbar", True):
+        cb = fig.colorbar(mappable, ax=ax, shrink=0.62, pad=0.08)
+        cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=10)
+        cb.outline.set_edgecolor("#E2E8F0")
+    return _finish(fig, out_path)
+
+
+def draw_scatter3d(p, out_path, width_in=8.0, height_in=4.5):
+    """三维散点（可按类别分组或按数值着色）。
+
+    params: x[]/y[]/z[] + c[]（数值着色）｜ 或 groups[{label, x[], y[], z[], color}] · view · size
+    """
+    fig = plt.figure(figsize=(width_in, height_in))
+    ax = fig.add_subplot(111, projection="3d")
+    mappable = None
+    if p.get("groups"):
+        for i, g in enumerate(p["groups"]):
+            col = _cyc(i, g.get("color"))
+            ax.scatter(g.get("x", []), g.get("y", []), g.get("z", []), s=float(p.get("size", 36)),
+                       color=col, edgecolor="white", linewidth=0.5, label=g.get("label", ""), depthshade=False)
+        if any(g.get("label") for g in p["groups"]):
+            ax.legend(loc="upper left", fontsize=9)
+    else:
+        c = p.get("c")
+        mappable = ax.scatter(p.get("x", []), p.get("y", []), p.get("z", []), s=float(p.get("size", 36)),
+                              c=c, cmap=(_soft_cmap(p.get("cmap", "blue")) if c is not None else None),
+                              color=(None if c is not None else (soft(p.get("color")) if p.get("color") else SOFT_COLORS["blue"])),
+                              edgecolor="white", linewidth=0.5, depthshade=False)
+    _prep_3d(ax, p)
+    ax.set_xlabel(p.get("xlabel", "x")); ax.set_ylabel(p.get("ylabel", "y")); ax.set_zlabel(p.get("zlabel", "z"))
+    ax.set_title(p.get("title", ""), pad=10)
+    if mappable is not None and p.get("colorbar", True):
+        cb = fig.colorbar(mappable, ax=ax, shrink=0.62, pad=0.08)
+        cb.set_label(p.get("colorbar_label", ""), color=INK["axis"], fontsize=10)
+        cb.outline.set_edgecolor("#E2E8F0")
+    return _finish(fig, out_path)
+
+
+DRAWERS.update({
+    "spectrum": draw_spectrum, "residual": draw_residual, "fit_band": draw_fit_band,
+    "box_jitter": draw_box_jitter, "km": draw_km, "forest": draw_forest, "volcano": draw_volcano,
+    "clustered_heatmap": draw_clustered_heatmap, "surface3d": draw_surface3d, "scatter3d": draw_scatter3d,
 })

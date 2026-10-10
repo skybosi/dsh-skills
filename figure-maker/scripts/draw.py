@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""draw.py —— 由**描述(spec)** 出图（独立：只用本 skill 目录里的脚本）
+"""draw.py —— 由**描述(spec)** 出图（figure-maker 的唯一入口，独立：只用本 skill 目录里的脚本）
 
 产物只有两样：**某个格式的图**  +  **元信息**（同目录 `fig.meta.json`：类型/格式/尺寸/字节数/版式检查/原始 spec/时间）
 
 用法
-  python3 scripts/draw.py --list                      # 列出支持的图型（B 类 + A 类）
-  python3 scripts/draw.py --example bar               # 打印该图型的示例 spec
+  python3 scripts/draw.py --list                      # 列出支持的图型（A 类 + B 类）
+  python3 scripts/draw.py --doctor                    # 自检依赖
+  python3 scripts/draw.py --example bar               # 打印该图型的**真实示例 spec**（取自 specs/）
   python3 scripts/draw.py spec.json                   # 出图（输出路径取 spec.output，默认 out/<id>.svg）
   python3 scripts/draw.py spec.json -o out/f.png      # 指定输出：**格式由扩展名决定** svg/png/webp/pdf…
   python3 scripts/draw.py spec.json --format webp     # 显式指定格式
-  python3 scripts/draw.py spec.json --check           # 出图后跑版式检查（重叠/越界），不过关退出码 1
+  python3 scripts/draw.py spec.json --check           # 把版式检查当红线（不过关退出码 1）
   python3 scripts/draw.py --batch specs/              # 批量：画出目录下所有 *.json
+
+版式检查语义（两类一致）
+  默认：出图 + 检查，**不拦截**（结果写进 meta.json 的 layout 字段，stdout 打印「通过 / 有告警」）
+  --check：检查不过关 → 退出码 1
 
 spec 结构
   B 类（数据图，Matplotlib）
@@ -21,63 +26,187 @@ spec 结构
   A 类（结构图，Mermaid）—— 直接给 Mermaid 源码，skill 不替你编图
     { "id": "flow1", "type": "flow", "output": "out/flow1.svg",
       "title": "流程标题", "mmd": "flowchart TD\\n  A[开始] --> B{判断}\\n  B -->|是| C[结束]" }
+  可选：curve（Mermaid 曲线：basis/linear/step…）、scale（A 类转位图的清晰度倍数，默认 2）
 
 依赖：B 类需 matplotlib + numpy；A 类需 Node + Playwright Chromium（见 SKILL.md「依赖与安装」）
 """
 import argparse
 import json
 import os
+import struct
 import subprocess
 import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+SKILL = os.path.dirname(HERE)
+SPECS = os.path.join(SKILL, 'specs')
 sys.path.insert(0, HERE)
 
 # matplotlib 的缓存写到临时目录：否则会在 skill 目录里生成 .mplcache/（污染分发内容）
-import tempfile
 os.environ.setdefault('MPLCONFIGDIR', os.path.join(tempfile.gettempdir(), 'figure-maker-mpl'))
 
 A_TYPES = ['flow', 'graph', 'tree', 'nn_diagram', 'ladder', 'timeline']
-X_TYPES = {'surface3d': '3D 曲面', 'multi_normal': '多元正态 3D'}
-FORMATS = ['svg', 'png', 'pdf', 'webp', 'eps', 'ps', 'jpeg', 'tiff']
+FORMATS = ['svg', 'png', 'pdf', 'webp', 'eps', 'ps', 'jpeg', 'jpg', 'tiff', 'tif']
+A_FORMATS = ('svg', 'png', 'webp')
 
 
 def b_types():
-    """B 类图型 = drawers.py 里的 draw_* 函数名（去掉前缀），再加上通用入口 render 支持的别名。"""
+    """B 类图型 = drawers.py 里的 draw_* 函数名（去掉前缀）。返回 (names, err)。"""
     try:
-        import drawers
+        import drawers  # noqa: F401
     except ImportError as e:
-        return []
+        return None, str(e)
+    import drawers
     names = sorted(n[len('draw_'):] for n in dir(drawers) if n.startswith('draw_'))
-    return names
+    return names, None
 
 
-def do_list():
-    bs = b_types()
-    print('A 类（Mermaid 结构图，%d 种，spec 里给 mmd 源码）：' % len(A_TYPES))
-    for t in A_TYPES:
-        print('   %s' % t)
-    print('\nB 类（Matplotlib 数据图，%d 种，spec 里给 params）：' % len(bs))
-    for i in range(0, len(bs), 4):
-        print('   ' + '  '.join('%-20s' % x for x in bs[i:i + 4]))
-    print('\n不支持（规范禁用 3D）：%s' % '、'.join('%s（%s）' % (k, v) for k, v in X_TYPES.items()))
-    print('\n输出格式：%s（由输出扩展名决定，或用 --format 指定）' % ' / '.join(FORMATS))
+def do_list(category=None):
+    """按**场景分类**列出图型（不再是一张平铺清单）。"""
+    import catalog
+    bs, err = b_types()
+    groups = {}
+    for cid, klass, name, when, _kws in catalog.CATEGORIES:
+        groups[cid] = (klass, name, when, [])
+    for e in catalog.entries():
+        if category and e['category'] != category:
+            continue
+        if e['category'] in groups:
+            groups[e['category']][3].append(e)
+    print('figure-maker 图型目录（按场景分类；共 %d 个条目）\n' % sum(len(g[3]) for g in groups.values()))
+    for cid, klass, name, when, items in catalog.CATEGORIES:
+        if category and cid != category:
+            continue
+        items = groups[cid][3]
+        if not items:
+            continue
+        print('■ %s · %s（%s）—— %s' % (klass, name, cid, when))
+        for e in items:
+            label = e['mermaid'] if e['kind'] == 'A' else e['type']
+            tag = ('A 类（spec 的 type 填 %s）' % e['type']) if e['kind'] == 'A' else ('B 类' + ('  ⏳未实现' if e['planned'] else ''))
+            print('   %-24s %-34s %s' % (label, e['scene'][:32], tag))
+        print('')
+    if category:
+        return
+    if bs is None:
+        print('⚠️  B 类（Matplotlib 数据图）当前不可用：未安装 matplotlib/numpy（%s）' % err)
+        print('    安装：python3 -m venv .venv && .venv/bin/pip install matplotlib numpy')
+    print('选型：python3 draw.py --recommend "用一句话描述你要画的图"')
+    print('骨架：python3 draw.py --example <图型>    目录：python3 draw.py --catalog --json')
+    print('输出格式：A 类 %s ｜ B 类 %s' % ('/'.join(A_FORMATS), ' / '.join(FORMATS)))
+
+
+def do_recommend(text):
+    """按用户描述推荐图型，并给出**可直接保存运行**的 spec 骨架。"""
+    import catalog
+    hits = catalog.recommend(text, limit=3)
+    if not hits:
+        print('没有匹配到图型。用 `--list` 看分类，或用更具体的词（例如「时序图」「热力图」「生存曲线」）。')
+        return 1
+    print('🔎 「%s」→ 推荐 %d 个候选：\n' % (text, len(hits)))
+    for i, (score, e, matched) in enumerate(hits, 1):
+        print('%d) [%s · %s] %s' % (i, e['kind'], catalog.category_name(e['category']),
+                                    (e['mermaid'] or e['type'])))
+        print('   场景：%s' % e['scene'])
+        if e['kind'] == 'A':
+            print('   写法：A 类，spec 里给 mmd 源码（type 填 %s）' % e['type'])
+            spec = {'id': 'demo-%s' % e['mermaid'].lower(), 'type': e['type'],
+                    'output': 'out/demo-%s.svg' % e['mermaid'].lower(), 'mmd': e['mmd']}
+            print('   —— 可直接保存为 spec.json ——')
+            for line in json.dumps(spec, ensure_ascii=False, indent=2).splitlines():
+                print('   ' + line)
+        else:
+            print('   参数键：%s' % (' · '.join(e['params']) or '（见 SPEC-REFERENCE）'))
+            print('   抄骨架：python3 draw.py --example %s    # 对应 %s' % (e['type'], e['example'] or '—'))
+        if matched:
+            print('   命中词：%s' % '、'.join(matched[:6]))
+        print('')
+    print('都不合适？用 --list 看 14 个场景分类，或直接点名图型（--example <type>）。')
+    return 0
+
+
+def do_catalog(as_json=False):
+    """打印机器可读目录（含分类、关键词、参数键、示例 spec 路径），供 agent 选型。"""
+    import catalog
+    data = {
+        'skill': 'figure-maker',
+        'version': 'figure-maker/1.1',
+        'categories': [{'id': c[0], 'class': c[1], 'name': c[2], 'when': c[3]} for c in catalog.CATEGORIES],
+        'types': catalog.entries(),
+    }
+    if as_json:
+        print(json.dumps(data, ensure_ascii=False, indent=1))
+    else:
+        for c in data['categories']:
+            n = sum(1 for e in data['types'] if e['category'] == c['id'])
+            print('%-12s %s（%s）%2d 个：%s' % (c['id'], c['name'], c['class'], n, c['when']))
+        print('\n共 %d 个条目（%d 已实现 / %d 规划中）' % (
+            len(data['types']),
+            sum(1 for e in data['types'] if not e['planned']),
+            sum(1 for e in data['types'] if e['planned'])))
+    return 0
+
 
 
 def do_example(t):
-    ex = {
-        'id': 'demo-' + t, 'type': t, 'output': 'out/demo-%s.svg' % t,
-        'params': {'title': '示例：%s' % t, 'xlabel': 'x', 'ylabel': 'y',
-                   'categories': ['甲', '乙', '丙', '丁'],
-                   'groups': [{'label': '组 1', 'values': [3, 5, 2, 4]},
-                              {'label': '组 2', 'values': [4, 2, 6, 3]}]}
-    } if t not in A_TYPES else {
-        'id': 'demo-' + t, 'type': t, 'output': 'out/demo-%s.svg' % t, 'title': '示例：%s' % t,
-        'mmd': 'flowchart TD\n  A[输入] --> B{判断}\n  B -->|是| C[处理]\n  B -->|否| D[结束]\n  C --> D'
-    }
+    """打印该图型的**真实示例 spec**（直接取 specs/ 下的同名文件），没有则退回最小骨架。"""
+    for pre in ('a__', 'b__'):
+        p = os.path.join(SPECS, pre + t + '.json')
+        if os.path.exists(p):
+            spec = json.load(open(p, encoding='utf-8'))
+            spec['output'] = 'out/demo-%s.svg' % t
+            print(json.dumps(spec, ensure_ascii=False, indent=2))
+            return
+    if t in A_TYPES:
+        ex = {'id': 'demo-' + t, 'type': t, 'output': 'out/demo-%s.svg' % t, 'title': '示例：%s' % t,
+              'mmd': 'flowchart TD\n  A[输入] --> B{判断}\n  B -->|是| C[处理]\n  B -->|否| D[结束]\n  C --> D'}
+    else:
+        ex = {'id': 'demo-' + t, 'type': t, 'output': 'out/demo-%s.svg' % t,
+              'params': {'title': '示例：%s' % t}}
     print(json.dumps(ex, ensure_ascii=False, indent=2))
 
+
+def _layout_summary(checks):
+    """把渲染器的检查结果规范化成 meta.layout（两类图型同一口径）。"""
+    if not isinstance(checks, dict):
+        return None
+    def cnt(*keys):
+        return sum(len(checks[k]) for k in keys if isinstance(checks.get(k), (list, tuple)))
+    gap = (checks.get('nodeGap') or {}).get('min')
+    gap_min = checks.get('gapMin')
+    gap_ok = (gap_min is None) or (gap is None) or (gap >= gap_min)
+    n_overlap = cnt('overlap', 'overlapText')
+    n_out = cnt('outOfCanvas')
+    return {
+        'overlap': n_overlap,
+        'outOfCanvas': n_out,
+        'overflow': cnt('overflow'),
+        'nodeGap': gap,
+        'gapMin': gap_min,
+        'diagramType': checks.get('diagramType'),
+        'passed': (n_overlap + n_out + cnt('overflow')) == 0 and gap_ok,
+    }
+
+
+def _image_size(path, fmt):
+    """尽量读出像素尺寸：SVG 读 width/height 属性；PNG 读 IHDR（不依赖任何第三方库）。"""
+    try:
+        if fmt == 'svg':
+            head = open(path, encoding='utf-8', errors='ignore').read(600)
+            import re as _re
+            mw = _re.search(r'width="([\d.]+)', head)
+            mh = _re.search(r'height="([\d.]+)', head)
+            if mw and mh:
+                return round(float(mw.group(1))), round(float(mh.group(1)))
+        elif fmt == 'png':
+            with open(path, 'rb') as f:
+                head = f.read(24)
+            if head[:8] == b'\x89PNG\r\n\x1a\n' and head[12:16] == b'IHDR':
+                return struct.unpack('>II', head[16:24])
+    except Exception:
+        pass
+    return None
 
 
 def write_meta(out, spec, checks=None, extra=None):
@@ -87,34 +216,28 @@ def write_meta(out, spec, checks=None, extra=None):
       id / type / format / 输出路径 / 字节数 / 尺寸 / 版式检查结果 / 原始 spec / 生成时间 / 工具版本
     """
     import datetime
+    fmt = os.path.splitext(out)[1].lstrip('.').lower()
     meta = {
         'id': spec.get('id'),
         'type': spec.get('type'),
-        'format': os.path.splitext(out)[1].lstrip('.').lower(),
+        'format': fmt,
         'output': os.path.abspath(out),
         'bytes': os.path.getsize(out) if os.path.exists(out) else 0,
         'generated_at': datetime.datetime.now().isoformat(timespec='seconds'),
-        'figure_maker': 'figure-maker/1.0',
+        'figure_maker': 'figure-maker/1.1',
         'spec': spec,
     }
-    if checks:
-        meta['layout'] = {
-            'overlap': len(checks.get('overlap') or []),
-            'outOfCanvas': len(checks.get('outOfCanvas') or []),
-            'passed': not (checks.get('overlap') or checks.get('outOfCanvas')),
-        }
+    lay = _layout_summary(checks)
+    if lay:
+        meta['layout'] = lay
+    warns = checks.get('warnings') if isinstance(checks, dict) else None
+    if warns:
+        meta['warnings'] = warns
     if extra:
         meta.update(extra)
-    # A 类：从 SVG 头里取尺寸
-    try:
-        head = open(out, encoding='utf-8', errors='ignore').read(400)
-        import re as _re
-        mw = _re.search(r'width="([\d.]+)', head)
-        mh = _re.search(r'height="([\d.]+)', head)
-        if mw and mh:
-            meta['width_px'] = float(mw.group(1)); meta['height_px'] = float(mh.group(1))
-    except Exception:
-        pass
+    size = _image_size(out, fmt)
+    if size:
+        meta['width_px'], meta['height_px'] = size
     # 元信息命名：与图**同目录**、去掉扩展名 → out/fig.webp ⇒ out/fig.meta.json
     # （同一 basename 的多种格式会共用一份元信息，以最后生成的为准 —— 这是刻意的简化）
     mp = os.path.splitext(out)[0] + '.meta.json'
@@ -122,15 +245,20 @@ def write_meta(out, spec, checks=None, extra=None):
         json.dump(meta, f, ensure_ascii=False, indent=1)
     return mp
 
+
 def render_a(spec, out):
     """A 类（Mermaid）：渲染 SVG；需要位图时自动转 PNG/WebP。
 
     产物格式支持：svg（默认）/ png / webp（png 由 Playwright 截图，webp 再由 Pillow 转）。
-    返回渲染器的布局检查结果（render-mermaid.js --json），供 --check 与元信息使用。
+    返回渲染器的版式检查结果（render-mermaid.js --json），供 --check 与元信息使用。
+
+    render-mermaid.js 退出码：0=全绿；1=**已出图但版式不过**（此时 SVG 一定存在）；
+    2=用法错误；3=渲染失败。以前把 1 也当成「渲染失败」，于是稍微拥挤的图会被整张丢掉，
+    还会留下一个没有 meta 的孤儿 SVG —— 现已区分。
     """
     ext = os.path.splitext(out)[1].lstrip('.').lower() or 'svg'
-    if ext not in ('svg', 'png', 'webp'):
-        raise SystemExit('❌ A 类（Mermaid）支持 svg / png / webp；不支持 .%s' % ext)
+    if ext not in A_FORMATS:
+        raise SystemExit('❌ A 类（Mermaid）支持 %s；不支持 .%s' % (' / '.join(A_FORMATS), ext))
     mmd = spec.get('mmd') or (spec.get('params') or {}).get('mmd')
     if not mmd:
         raise SystemExit('A 类 spec 需要 "mmd" 字段（Mermaid 源码）；本 skill 不替你编图 ✗')
@@ -147,11 +275,16 @@ def render_a(spec, out):
     cmd = ['node', js, '--in', mmd_path, '--out', svg_path, '--json', json_path]
     if spec.get('title'):
         cmd += ['--title', spec['title']]
+    if spec.get('curve'):
+        cmd += ['--curve', str(spec['curve'])]
+    if spec.get('background') is False:
+        cmd += ['--bg', '0']
     r = subprocess.run(cmd, capture_output=True, text=True)
-    if r.returncode != 0:
+    if r.returncode not in (0, 1):
         sys.stderr.write((r.stdout or '') + (r.stderr or ''))
-        raise SystemExit('A 类渲染失败（检查 Node 与 Playwright 是否可用）')
-
+        raise SystemExit('A 类渲染失败（Mermaid 解析/渲染错误；检查 Node 与 Playwright 是否可用）')
+    if r.stderr:
+        sys.stderr.write(r.stderr)
     checks = None
     try:
         checks = json.load(open(json_path, encoding='utf-8'))
@@ -169,6 +302,7 @@ def render_a(spec, out):
         rr = subprocess.run(['node', raster, '--in', svg_path, '--out', png_path, '--scale', str(spec.get('scale') or 2)],
                             capture_output=True, text=True)
         if rr.returncode != 0:
+            sys.stderr.write((rr.stdout or '') + (rr.stderr or ''))
             raise SystemExit('A 类转 PNG 失败（svg-to-raster.js）')
         try:
             from PIL import Image
@@ -180,10 +314,8 @@ def render_a(spec, out):
 
 def render_b(spec, out):
     import drawers
-    from style import setup_soft_style, report_and_exit
+    from style import setup_soft_style
     t = spec['type']
-    if not hasattr(drawers, 'draw_' + t) and not hasattr(drawers, 'render'):
-        raise SystemExit('未知图型：%s（用 --list 看支持列表）' % t)
     setup_soft_style()
     checks = drawers.render(t, spec.get('params') or {}, out,
                             width_in=float(spec.get('width_in') or 8.0),
@@ -191,11 +323,10 @@ def render_b(spec, out):
     return checks
 
 
-
 def do_doctor():
     """自检运行环境：两类图各自需要什么、缺什么、怎么装。"""
     import platform, shutil, subprocess as sp
-    ok = lambda b: '✅' if b else '❌'
+    ok = lambda b: '✅' if b else '❌'  # noqa: E731
     py = platform.python_version()
     mods = {}
     for m in ('matplotlib', 'numpy', 'PIL'):
@@ -212,19 +343,45 @@ def do_doctor():
                  "catch(e2){console.log('no')}}")
         pw = sp.run([node, '-e', probe], capture_output=True, text=True).stdout.strip() == 'ok'
     mermaid = os.path.exists(os.path.join(HERE, 'vendor', 'mermaid.min.js'))
+    bs, _err = b_types()
     print('figure-maker 环境自检')
-    print('  Python            %s %s' % (py, ok(mods['matplotlib'] and mods['numpy'])))
-    print('  matplotlib        %s' % (mods['matplotlib'] or '未安装 → pip install matplotlib'))
-    print('  numpy             %s' % (mods['numpy'] or '未安装 → pip install numpy'))
-    print('  Pillow（webp）     %s' % (mods['PIL'] or '未安装 → pip install Pillow（可选：只影响 webp 输出）'))
+    print('  Python            %s' % py)
+    print('  matplotlib        %s %s' % (mods['matplotlib'] or '未安装 → pip install matplotlib', ok(mods['matplotlib'])))
+    print('  numpy             %s %s' % (mods['numpy'] or '未安装 → pip install numpy', ok(mods['numpy'])))
+    print('  Pillow（webp）     %s %s' % (mods['PIL'] or '未安装 → pip install Pillow（可选：只影响 webp 输出）', ok(mods['PIL'])))
     print('  Node.js           %s %s' % (node_v or '未安装', ok(bool(node))))
     print('  Playwright 模块    %s' % ('可用' if pw else '未找到 → npm i -g playwright 或设 PW_MODULES'))
     print('  Chromium 浏览器    %s' % ('见 PLAYWRIGHT_BROWSERS_PATH' if pw else '→ npx playwright install chromium'))
     print('  mermaid 运行时      %s' % ('已内置' if mermaid else '缺失'))
+    print('  B 类图型数         %s' % ('%d 种' % len(bs) if bs is not None else '不可用（缺 matplotlib）'))
     print('')
-    print('  → B 类（45 种数据图）需要：Python + matplotlib + numpy（webp 另需 Pillow）')
+    print('  → B 类（数据图）需要：Python + matplotlib + numpy（webp 另需 Pillow）')
     print('  → A 类（Mermaid 结构图）需要：Node.js + Playwright Chromium（mermaid 已内置）')
     return 0
+
+
+def _quick_ok(checks):
+    """检查结果是否全绿（两类图型同一口径；gapMin 为 None 表示该图型不套间距红线）。"""
+    if not isinstance(checks, dict):
+        return True
+    for k in ('overlap', 'overlapText', 'overflow', 'outOfCanvas'):
+        if checks.get(k):
+            return False
+    gap = (checks.get('nodeGap') or {}).get('min')
+    gap_min = checks.get('gapMin')
+    if gap_min is not None and gap is not None and gap < gap_min:
+        return False
+    return True
+
+
+def _run_one(spec, out, check=False):
+    t = spec.get('type')
+    checks = render_a(spec, out) if t in A_TYPES else render_b(spec, out)
+    mp = write_meta(out, spec, checks)
+    ok = _quick_ok(checks)
+    # 提示由渲染器自己打到 stderr（这里转发过），此处只回传计数，避免同一句提示出现两次
+    warns = (checks or {}).get('warnings') or [] if isinstance(checks, dict) else []
+    return mp, ok, warns
 
 
 def main():
@@ -232,8 +389,11 @@ def main():
     ap.add_argument('spec', nargs='?')
     ap.add_argument('-o', '--out')
     ap.add_argument('--format', choices=FORMATS)
-    ap.add_argument('--check', action='store_true', help='出图后跑版式检查（不通过则退出码 1）')
-    ap.add_argument('--list', action='store_true')
+    ap.add_argument('--check', action='store_true', help='把版式检查当红线（不过关则退出码 1）')
+    ap.add_argument('--list', nargs='?', const='', metavar='CATEGORY', help='按场景分类列图型（可只列某个分类，如 --list trend）')
+    ap.add_argument('--recommend', metavar='DESC', help='按一句描述推荐图型并给出可跑骨架')
+    ap.add_argument('--catalog', action='store_true', help='打印图型目录（配 --json 输出机器可读目录）')
+    ap.add_argument('--json', action='store_true', help='配合 --catalog 使用：输出 JSON')
     ap.add_argument('--doctor', action='store_true', help='自检依赖环境')
     ap.add_argument('--example', metavar='TYPE')
     ap.add_argument('--batch', metavar='DIR', help='批量：画出该目录下所有 *.json spec')
@@ -241,8 +401,12 @@ def main():
 
     if a.doctor:
         return do_doctor()
-    if a.list:
-        do_list(); return 0
+    if a.catalog:
+        return do_catalog(as_json=a.json)
+    if a.list is not None:
+        do_list(a.list or None); return 0
+    if a.recommend:
+        return do_recommend(a.recommend)
     if a.example:
         do_example(a.example); return 0
     if a.batch:
@@ -250,24 +414,23 @@ def main():
         specs = sorted(glob.glob(os.path.join(a.batch, '*.json')))
         if not specs:
             raise SystemExit('目录里没有 spec：%s' % a.batch)
+        if a.out:
+            raise SystemExit('--batch 与 -o 不能同时用（所有 spec 会写到同一个文件）')
         ok = fail = 0
         for sp in specs:
             spec = json.load(open(sp, encoding='utf-8'))
             t = spec.get('type')
-            out = a.out or spec.get('output') or os.path.join('out', '%s.svg' % (spec.get('id') or os.path.basename(sp)[:-5]))
+            out = spec.get('output') or os.path.join('out', '%s.svg' % (spec.get('id') or os.path.basename(sp)[:-5]))
             if a.format:
                 out = os.path.splitext(out)[0] + '.' + a.format
             try:
-                if t in X_TYPES:
-                    raise RuntimeError('规范禁用 3D')
-                if t in A_TYPES:
-                    checks = render_a(spec, out)
-                else:
-                    checks = render_b(spec, out)
-                    if a.check and not _quick_ok(checks):
-                        raise RuntimeError('版式检查未通过')
-                write_meta(out, spec, locals().get('checks'))
-                print('✅ %-40s %s (+ .meta.json)' % (os.path.basename(sp), out)); ok += 1
+                mp, good, _w = _run_one(spec, out, check=a.check)
+                if a.check and not good:
+                    raise RuntimeError('版式检查未通过（见 %s）' % mp)
+                print('✅ %-40s %s (+ %s)%s' % (os.path.basename(sp), out, os.path.basename(mp),
+                                                '' if good else '  ⚠️ 版式有告警')); ok += 1
+            except SystemExit as e:
+                print('❌ %-40s %s' % (os.path.basename(sp), e)); fail += 1
             except Exception as e:
                 print('❌ %-40s %s' % (os.path.basename(sp), e)); fail += 1
         print('\n批量完成：成功 %d ｜ 失败 %d' % (ok, fail))
@@ -276,42 +439,17 @@ def main():
         ap.print_help(); return 2
 
     spec = json.load(open(a.spec, encoding='utf-8'))
-    t = spec.get('type')
-    if t in X_TYPES:
-        raise SystemExit('❌ 规范禁用 3D 图（%s）：请改用分面等高线 / 多子图等二维表达' % t)
     out = a.out or spec.get('output') or os.path.join('out', '%s.svg' % (spec.get('id') or 'fig'))
     if a.format:
         out = os.path.splitext(out)[0] + '.' + a.format
-
-    if t in A_TYPES:
-        checks = render_a(spec, out)
-        mp = write_meta(out, spec, checks)
-        ok = _quick_ok(checks) if checks else True
-        print('✅ 图：%s' % out)
-        print('   元信息：%s ｜ 版式检查：%s' % (mp, '通过' if ok else '有告警（加 --check 看详情）'))
-        if a.check and not ok:
-            return 1
-        return 0
-
-    checks = render_b(spec, out)
-    mp = write_meta(out, spec, checks)
-    ok = _quick_ok(checks)
+    mp, ok, warns = _run_one(spec, out, check=a.check)
     print('✅ 图：%s' % out)
-    print('   元信息：%s ｜ 版式检查：%s' % (mp, '通过' if ok else '有告警（加 --check 看详情）'))
-    if not a.check:
-        return 0
-    from style import report_and_exit
-    return report_and_exit(checks, out)
-
-
-def _quick_ok(checks):
-    if not checks:
-        return True
-    for k in ('overlap', 'outOfCanvas', 'overlapText'):
-        v = checks.get(k) if isinstance(checks, dict) else None
-        if v:
-            return False
-    return True
+    print('   元信息：%s ｜ 版式检查：%s%s'
+          % (mp, '通过' if ok else '有告警（加 --check 可当红线）',
+             '' if not warns else ' ｜ ⚠️ 渲染提示 %d 条（见 meta.warnings）' % len(warns)))
+    if a.check and not ok:
+        return 1
+    return 0
 
 
 if __name__ == '__main__':

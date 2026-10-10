@@ -1,0 +1,54 @@
+{
+ "id": "research-forest",
+ "type": "forest",
+ "output": "out/research-forest.svg",
+ "params": {
+  "title": "亚组分析（OR，95% CI）",
+  "log": true,
+  "xlabel": "OR（95% CI，对数轴）",
+  "items": [
+   {
+    "label": "全体",
+    "estimate": 0.78,
+    "lo": 0.66,
+    "hi": 0.92
+   },
+   {
+    "label": "男性",
+    "estimate": 0.81,
+    "lo": 0.65,
+    "hi": 1.01
+   },
+   {
+    "label": "女性",
+    "estimate": 0.74,
+    "lo": 0.58,
+    "hi": 0.94
+   },
+   {
+    "label": "<65 岁",
+    "estimate": 0.72,
+    "lo": 0.57,
+    "hi": 0.91
+   },
+   {
+    "label": "≥65 岁",
+    "estimate": 0.88,
+    "lo": 0.68,
+    "hi": 1.14
+   },
+   {
+    "label": "无合并症",
+    "estimate": 0.7,
+    "lo": 0.55,
+    "hi": 0.89
+   }
+  ],
+  "summary": {
+   "estimate": 0.78,
+   "lo": 0.69,
+   "hi": 0.88
+  },
+  "summary_label": "合并效应"
+ }
+}

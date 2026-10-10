@@ -1,0 +1,36 @@
+{
+ "id": "research-waterfall",
+ "type": "waterfall",
+ "output": "out/research-waterfall.svg",
+ "params": {
+  "title": "端到端延迟归因（相对基线 ms）",
+  "ylabel": "延迟贡献 (ms)",
+  "start": 35,
+  "items": [
+   {
+    "label": "序列化",
+    "value": 12
+   },
+   {
+    "label": "网络",
+    "value": 28
+   },
+   {
+    "label": "排队",
+    "value": 45
+   },
+   {
+    "label": "计算",
+    "value": 120
+   },
+   {
+    "label": "缓存命中",
+    "value": -35
+   },
+   {
+    "label": "批处理",
+    "value": -22
+   }
+  ]
+ }
+}

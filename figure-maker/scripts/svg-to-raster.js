@@ -29,8 +29,15 @@ function parseArgs(argv) {
     const PW = process.env.PW_MODULES || '/tmp/pw/node_modules';
     playwright = require(path.join(PW, 'playwright'));   // 与 render-mermaid.js 同款解析
   }
-
-  const browser = await playwright.chromium.launch({ channel: 'chromium' });
+  // 浏览器目录自动探测：**必须与 render-mermaid.js 保持一致**，否则会出现
+  // 「A 类 SVG 能出、PNG/WebP 报 Executable doesn't exist」这种半残状态（实测踩过）。
+  if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
+    const cands = ['/tmp/pw-browsers', path.join(require('os').homedir(), 'Library/Caches/ms-playwright')];
+    for (const c of cands) { if (fs.existsSync(c)) { process.env.PLAYWRIGHT_BROWSERS_PATH = c; break; } }
+  }
+  let browser;
+  try { browser = await playwright.chromium.launch({ channel: 'chromium' }); }
+  catch (e) { browser = await playwright.chromium.launch(); }
   const page = await browser.newPage({ deviceScaleFactor: scale });
   await page.setContent(
     '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:#fff}svg{display:block}</style>' + svg,

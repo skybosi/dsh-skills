@@ -1,0 +1,65 @@
+{
+ "id": "research-errorbar",
+ "type": "errorbar",
+ "output": "out/research-errorbar.svg",
+ "params": {
+  "title": "各方法在 4 个数据集上的准确率（mean ± std，n=5）",
+  "labels": [
+   "CIFAR-10",
+   "CIFAR-100",
+   "ImageNet-100",
+   "DomainNet"
+  ],
+  "ylabel": "Top-1 准确率 (%)",
+  "groups": [
+   {
+    "label": "基线",
+    "values": [
+     93.2,
+     74.1,
+     81.5,
+     62.3
+    ],
+    "errors": [
+     0.4,
+     0.6,
+     0.5,
+     1.1
+    ],
+    "color": "grey"
+   },
+   {
+    "label": "数据增强",
+    "values": [
+     94.6,
+     76.8,
+     83.9,
+     65.1
+    ],
+    "errors": [
+     0.3,
+     0.5,
+     0.4,
+     0.9
+    ],
+    "color": "blue"
+   },
+   {
+    "label": "本方法",
+    "values": [
+     95.8,
+     79.2,
+     86.4,
+     68.7
+    ],
+    "errors": [
+     0.2,
+     0.4,
+     0.3,
+     0.8
+    ],
+    "color": "green"
+   }
+  ]
+ }
+}

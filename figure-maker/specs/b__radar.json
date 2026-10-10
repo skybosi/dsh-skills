@@ -1,0 +1,51 @@
+{
+ "id": "research-radar",
+ "type": "radar",
+ "output": "out/research-radar.svg",
+ "params": {
+  "title": "三种部署方案的指标对比（归一化 0–100）",
+  "axes": [
+   "准确率",
+   "召回率",
+   "F1",
+   "推理速度",
+   "显存友好度"
+  ],
+  "ymax": 100,
+  "series": [
+   {
+    "label": "FP32 基线",
+    "values": [
+     92,
+     88,
+     90,
+     45,
+     40
+    ],
+    "color": "grey"
+   },
+   {
+    "label": "FP16",
+    "values": [
+     91,
+     87,
+     89,
+     70,
+     65
+    ],
+    "color": "blue"
+   },
+   {
+    "label": "INT8 量化（本方法）",
+    "values": [
+     88,
+     85,
+     86,
+     95,
+     92
+    ],
+    "color": "green"
+   }
+  ]
+ }
+}

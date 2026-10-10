@@ -206,11 +206,20 @@ def check_layout(fig, overlap_ratio=0.12, min_px=2.5):
                 overlap.append({"a": a["t"], "b": b["t"], "ratio": round(ratio, 3)})
 
     out = []
+    degenerate = 0
+    # matplotlib 3D 等场景会留下「窗口坐标在画布外上万像素」的**退化文本对象**（永远画不出来、
+    # 也看不见）。这类不该算越界 —— 实测 surface3d 的两个 z 轴刻度就会以 x≈-12023 / x≈50148 出现。
+    # 判据：整体偏出画布超过 1.5 个画布尺寸 → 视为退化对象，只计数不报错。
+    dx, dy = W * 1.5, H * 1.5
     for it in texts:
+        if (it["x"] + it["w"] < -dx or it["x"] > W + dx or it["y"] + it["h"] < -dy or it["y"] > H + dy):
+            degenerate += 1
+            continue
         if it["x"] < -min_px or it["y"] < -min_px or it["x"] + it["w"] > W + min_px or it["y"] + it["h"] > H + min_px:
             out.append({"t": it["t"], "box_px": {k: round(it[k], 1) for k in ("x", "y", "w", "h")}})
 
-    return {"canvas_px": [W, H], "texts": len(texts), "overlap": overlap, "outOfCanvas": out}
+    return {"canvas_px": [W, H], "texts": len(texts), "overlap": overlap,
+            "outOfCanvas": out, "degenerateTexts": degenerate}
 
 
 def report_and_exit(checks, out_path):

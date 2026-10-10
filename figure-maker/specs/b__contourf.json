@@ -1,0 +1,19 @@
+{
+ "id": "research-contourf",
+ "type": "contourf",
+ "output": "out/research-contourf.svg",
+ "params": {
+  "title": "二维损失景观（椭圆谷）",
+  "func": "X**2 + 0.6*Y**2 + 0.8*X*Y",
+  "x_min": -4,
+  "x_max": 4,
+  "y_min": -3,
+  "y_max": 3,
+  "levels": 14,
+  "colorbar": true,
+  "colorbar_label": "损失",
+  "mark_min": true,
+  "xlabel": "参数 θ₁",
+  "ylabel": "参数 θ₂"
+ }
+}
