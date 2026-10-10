@@ -92,6 +92,7 @@ def do_list(category=None):
     if bs is None:
         print('⚠️  B 类（Matplotlib 数据图）当前不可用：未安装 matplotlib/numpy（%s）' % err)
         print('    安装：python3 -m venv .venv && .venv/bin/pip install matplotlib numpy')
+    print('方案模板（完整真实方案图，可直接抄改）：--example tech-flow / tech-arch / tech-swimlane')
     print('选型：python3 draw.py --recommend "用一句话描述你要画的图"')
     print('骨架：python3 draw.py --example <图型>    目录：python3 draw.py --catalog --json')
     print('输出格式：A 类 %s ｜ B 类 %s' % ('/'.join(A_FORMATS), ' / '.join(FORMATS)))
@@ -158,6 +159,13 @@ def do_example(t):
             spec['output'] = 'out/demo-%s.svg' % t
             print(json.dumps(spec, ensure_ascii=False, indent=2))
             return
+    # 方案模板（完整的真实方案图，不是最小骨架）：specs/templates/<name>.json
+    tp = os.path.join(SPECS, 'templates', t + '.json')
+    if os.path.exists(tp):
+        spec = json.load(open(tp, encoding='utf-8'))
+        spec['output'] = 'out/%s.svg' % t          # 模板保持自己的输出名，方便直接出图
+        print(json.dumps(spec, ensure_ascii=False, indent=2))
+        return
     if t in A_TYPES:
         ex = {'id': 'demo-' + t, 'type': t, 'output': 'out/demo-%s.svg' % t, 'title': '示例：%s' % t,
               'mmd': 'flowchart TD\n  A[输入] --> B{判断}\n  B -->|是| C[处理]\n  B -->|否| D[结束]\n  C --> D'}
@@ -424,6 +432,14 @@ def do_doctor():
     print('  Chromium 浏览器    %s' % ('见 PLAYWRIGHT_BROWSERS_PATH' if pw else '→ npx playwright install chromium'))
     print('  mermaid 运行时      %s' % ('已内置' if mermaid else '缺失'))
     print('  B 类图型数         %s' % ('%d 种' % len(bs) if bs is not None else '不可用（缺 matplotlib）'))
+    try:
+        import build_docs
+        drift = build_docs.check_docs()
+        print('  文档同步           %s' % ('✅ TYPES.md / README.md 与 catalog.py 一致'
+                                          if not drift else
+                                          '❌ 漂移：%s（跑 python3 scripts/build_docs.py 修复）' % '、'.join(drift)))
+    except Exception as e:                      # 校验失败不该让自检崩掉
+        print('  文档同步           ⚠️ 无法校验（%s）' % e)
     print('')
     print('  → B 类（数据图）需要：Python + matplotlib + numpy（webp 另需 Pillow）')
     print('  → A 类（Mermaid 结构图）需要：Node.js + Playwright Chromium（mermaid 已内置）')
@@ -467,6 +483,8 @@ def main():
     ap.add_argument('--catalog', action='store_true', help='打印图型目录（配 --json 输出机器可读目录）')
     ap.add_argument('--json', action='store_true', help='配合 --catalog 使用：输出 JSON')
     ap.add_argument('--no-reexec', action='store_true', help='B 类缺少 matplotlib 时不要自动换解释器')
+    ap.add_argument('--check-docs', action='store_true',
+                    help='只检查生成类文档（TYPES.md / README.md）是否与 catalog.py 同步，不一致退出码 1')
     ap.add_argument('--doctor', action='store_true', help='自检依赖环境')
     ap.add_argument('--example', metavar='TYPE')
     ap.add_argument('--batch', metavar='DIR', help='批量：画出该目录下所有 *.json spec')
@@ -491,6 +509,15 @@ def main():
     if any(t and t not in A_TYPES for t in _need_types):
         _maybe_reexec()
 
+    if a.check_docs:
+        import build_docs
+        drift = build_docs.check_docs()
+        if drift:
+            print('❌ 生成类文档与 catalog.py 不一致：%s' % '、'.join(drift))
+            print('   修复：python3 scripts/build_docs.py')
+            return 1
+        print('✅ 生成类文档与 catalog.py 一致（TYPES.md / README.md）')
+        return 0
     if a.doctor:
         return do_doctor()
     if a.catalog:

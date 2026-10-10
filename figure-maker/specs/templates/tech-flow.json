@@ -1,0 +1,10 @@
+{
+ "id": "tech-flow",
+ "type": "flow",
+ "output": "out/tech-flow.svg",
+ "title": "订单履约主流程（含异常与补偿闭环）",
+ "mmd": "flowchart TD\n  subgraph 接入层\n    A1[App / H5 提交订单] --> A2{幂等键校验}\n  end\n  subgraph 风控与营销\n    B1{风控通过?} --> B2[优惠券试算]\n  end\n  subgraph 库存域\n    C1{可售库存充足?} --> C2[预占库存 TCC-Try]\n  end\n  subgraph 支付域\n    D1[创建支付单] --> D2{支付结果}\n  end\n  subgraph 履约域\n    E1[生成履约单] --> E2[仓库拣货出库] --> E3{发货成功?}\n  end\n  subgraph 异步与补偿\n    F1[[关单并释放库存]]\n    F2[[支付对账任务]]\n    F3[[出库重试队列]]\n    F4[[人工介入工单]]\n  end\n  A2 -->|已存在| R1[返回原订单]\n  A2 -->|新请求| B1\n  B1 -->|拒绝| R2[返回风控拦截]\n  B1 -->|通过| B2 --> C1\n  C1 -->|不足| F1 --> R3[提示缺货 / 推荐替代]\n  C1 -->|充足| C2 --> D1\n  D2 -->|成功| E1\n  D2 -->|超时或失败| F2\n  F2 -->|对账确认失败| F1\n  E2 --> E3\n  E3 -->|否| F3 --> E2\n  F3 -->|重试超限| F4\n  E3 -->|是| G1[推送物流并通知用户] --> G2([订单完成])\n  classDef dec fill:#FEF3C7,stroke:#FCD34D,stroke-width:1.5px,color:#212529;\n  classDef comp fill:#F1F3F5,stroke:#ADB5BD,stroke-width:1.5px,color:#212529;\n  classDef ok fill:#D1FAE5,stroke:#86EFAC,stroke-width:1.5px,color:#212529;\n  class A2,B1,C1,D2,E3 dec;\n  class F1,F2,F3,F4 comp;\n  class G2 ok;\n",
+ "params": {
+  "title": "订单履约主流程（复杂业务流程模板：6 个子域 · 20+ 节点 · 异常与补偿闭环）"
+ }
+}

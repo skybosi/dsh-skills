@@ -1,0 +1,10 @@
+{
+ "id": "tech-arch",
+ "type": "flow",
+ "output": "out/tech-arch.svg",
+ "title": "订单中台技术架构（分层 + 中间件 + 外部依赖）",
+ "mmd": "flowchart LR\n  subgraph 客户端\n    C1[App] ; C2[小程序] ; C3[Web]\n  end\n  subgraph 接入层\n    G1[Nginx / ALB] --> G2[API 网关<br/>鉴权 · 限流 · 路由]\n  end\n  subgraph 应用服务\n    A1[订单服务] ; A2[支付服务] ; A3[库存服务] ; A4[履约服务] ; A5[通知服务]\n  end\n  subgraph 中间件\n    M1[[Kafka]] ; M2[(Redis 集群)] ; M3[配置中心] ; M4[注册中心]\n  end\n  subgraph 存储\n    S1[(MySQL 主从)] ; S2[(TiDB 归档)] ; S3[(OSS 对象存储)]\n  end\n  subgraph 外部依赖\n    E1[微信支付] ; E2[物流开放平台] ; E3[风控引擎]\n  end\n  C1 --> G1 ; C2 --> G1 ; C3 --> G1\n  G2 --> A1 ; G2 --> A2 ; G2 --> A3\n  A1 --> S1 ; A2 --> S1 ; A3 --> M2\n  A1 --> M1 ; A4 --> M1 ; M1 --> A5\n  A2 --> E1 ; A3 --> E3 ; A4 --> E2\n  A1 --> S3 ; A5 --> S3\n  S1 -.->|冷数据归档| S2\n  A1 -.-> M3 ; A2 -.-> M4\n  classDef client fill:#FBE4D5,stroke:#E9B08A,stroke-width:1.5px,color:#212529;\n  classDef svc fill:#DBEAFE,stroke:#93C5FD,stroke-width:1.5px,color:#212529;\n  classDef mid fill:#E9D5FF,stroke:#C4B5FD,stroke-width:1.5px,color:#212529;\n  classDef store fill:#D1FAE5,stroke:#86EFAC,stroke-width:1.5px,color:#212529;\n  classDef ext fill:#F1F3F5,stroke:#ADB5BD,stroke-width:1.5px,color:#212529;\n  class C1,C2,C3 client;\n  class G1,G2 svc;\n  class A1,A2,A3,A4,A5 svc;\n  class M1,M2,M3,M4 mid;\n  class S1,S2,S3 store;\n  class E1,E2,E3 ext;\n",
+ "params": {
+  "title": "订单中台技术架构（分层架构模板：客户端/接入/应用/中间件/存储/外部依赖）"
+ }
+}

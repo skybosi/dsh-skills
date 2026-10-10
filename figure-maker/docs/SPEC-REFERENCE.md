@@ -87,7 +87,21 @@
 见 [TYPES.md](../TYPES.md)（每个图型一行：场景 · 关键词 · 参数键 · 示例 spec 路径）。
 `参数键` 一列由源码自动抽取，**不会和实现漂移**。
 
-## 6. 检查与元信息
+## 6. 方案模板（`specs/templates/`）
+
+写技术方案文档时，不必从零写 spec —— 这里放了三份**完整的真实方案图**，直接 `--example` 取出来改：
+
+| 模板 | 内容 | 取用 |
+|---|---|---|
+| `tech-flow` | 订单履约主流程：6 个子域、20+ 节点、异常与补偿闭环（`flowchart TD` + `classDef` 语义分类） | `python3 scripts/draw.py --example tech-flow > spec.json` |
+| `tech-arch` | 订单中台技术架构：客户端 / 接入 / 应用服务 / 中间件 / 存储 / 外部依赖 六层，含跨层数据流与异步链路 | `--example tech-arch` |
+| `tech-swimlane` | 订单履约跨系统职责：用户 / 订单 / 库存 / 支付 / 履约 5 泳道、12 步（B 类 `swimlane`） | `--example tech-swimlane` |
+
+> 模板是**普通 spec**，`--batch specs/` 不会扫到它们（在子目录里），样例画廊也仍是 98 张；
+> 出图：`python3 scripts/draw.py spec.json --check`。⚠️ TD 方向的复杂流程图会很高（3000+ px），
+> 放进方案文档建议改 `flowchart LR` 或按子域拆成两张。
+
+## 7. 检查与元信息
 
 - 默认：出图 + 版式检查（**不拦截**），结果写进 `meta.layout`，stdout 打印「通过 / 有告警」
 - `--check`：把检查当红线，不过关退出码 1

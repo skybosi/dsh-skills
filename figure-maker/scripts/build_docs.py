@@ -8,6 +8,7 @@
   · TYPES.md            —— 整篇生成（分类目录 + 每类图型的场景/关键词/参数键/样例 + A 类骨架）
   · README.md           —— 只替换 <!-- GALLERY:START --> … <!-- GALLERY:END --> 之间的画廊
 """
+import argparse
 import os
 import sys
 
@@ -188,24 +189,58 @@ def gallery_md():
     return '\n'.join(L)
 
 
-def update_readme():
+def render_readme():
+    """返回「按当前 catalog.py 渲染出来的 README 全文」（只替换 GALLERY 区块，其余原样保留）。"""
     p = os.path.join(SKILL, 'README.md')
     if not os.path.exists(p):
-        return False
+        return None
     s = open(p, encoding='utf-8').read()
     start, end = '<!-- GALLERY:START -->', '<!-- GALLERY:END -->'
     block = gallery_md()
     if start in s and end in s:
-        pre = s[:s.index(start)]
-        post = s[s.index(end) + len(end):]
-        s = pre + block + post
-    else:
-        s = s + '\n' + block + '\n'
-    open(p, 'w', encoding='utf-8').write(s)
+        return s[:s.index(start)] + block + s[s.index(end) + len(end):]
+    return s + '\n' + block + '\n'
+
+
+def render_all():
+    """生成物全文：{文件名: 内容}。生成器与检查器共用同一份渲染逻辑，避免两边不一致。"""
+    return {'TYPES.md': types_md(), 'README.md': render_readme()}
+
+
+def check_docs():
+    """返回与磁盘内容不一致的生成物文件名列表（空列表 = 文档与 catalog.py 同步）。"""
+    drift = []
+    for name, content in render_all().items():
+        if content is None:
+            continue
+        path = os.path.join(SKILL, name)
+        cur = open(path, encoding='utf-8').read() if os.path.exists(path) else None
+        if cur != content:
+            drift.append(name)
+    return drift
+
+
+def update_readme():
+    content = render_readme()
+    if content is None:
+        return False
+    open(os.path.join(SKILL, 'README.md'), 'w', encoding='utf-8').write(content)
     return True
 
 
 def main():
+    ap = argparse.ArgumentParser(description='从 catalog.py 生成 TYPES.md / README 画廊')
+    ap.add_argument('--check', action='store_true',
+                    help='只检查生成物是否与 catalog.py 同步（不一致退出码 1，不写文件）')
+    a = ap.parse_args()
+    if a.check:
+        drift = check_docs()
+        if drift:
+            print('❌ 生成类文档与 catalog.py 不一致：%s' % '、'.join(drift))
+            print('   修复：python3 scripts/build_docs.py')
+            return 1
+        print('✅ 生成类文档与 catalog.py 一致（TYPES.md / README.md）')
+        return 0
     open(os.path.join(SKILL, 'TYPES.md'), 'w', encoding='utf-8').write(types_md())
     print('✅ TYPES.md 已生成')
     if update_readme():

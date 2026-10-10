@@ -1,0 +1,159 @@
+{
+ "id": "tech-swimlane",
+ "type": "swimlane",
+ "output": "out/tech-swimlane.svg",
+ "params": {
+  "title": "订单履约：跨系统职责泳道图",
+  "direction": "LR",
+  "lanes": [
+   {
+    "id": "u",
+    "label": "用户"
+   },
+   {
+    "id": "o",
+    "label": "订单系统"
+   },
+   {
+    "id": "s",
+    "label": "库存系统"
+   },
+   {
+    "id": "p",
+    "label": "支付系统"
+   },
+   {
+    "id": "w",
+    "label": "履约 / 仓配"
+   }
+  ],
+  "steps": [
+   {
+    "id": "s1",
+    "lane": "u",
+    "label": "提交订单",
+    "col": 0,
+    "color": "orange"
+   },
+   {
+    "id": "s2",
+    "lane": "o",
+    "label": "幂等 + 风控",
+    "col": 1
+   },
+   {
+    "id": "s3",
+    "lane": "s",
+    "label": "预占库存<br/>(TCC-Try)",
+    "col": 2,
+    "color": "green"
+   },
+   {
+    "id": "s4",
+    "lane": "o",
+    "label": "创建支付单",
+    "col": 3
+   },
+   {
+    "id": "s5",
+    "lane": "p",
+    "label": "收单 + 回调",
+    "col": 4,
+    "color": "purple"
+   },
+   {
+    "id": "s6",
+    "lane": "o",
+    "label": "生成履约单",
+    "col": 5
+   },
+   {
+    "id": "s7",
+    "lane": "w",
+    "label": "拣货出库",
+    "col": 6,
+    "color": "purple"
+   },
+   {
+    "id": "s8",
+    "lane": "w",
+    "label": "物流揽收",
+    "col": 7,
+    "color": "purple"
+   },
+   {
+    "id": "s9",
+    "lane": "o",
+    "label": "确认收货",
+    "col": 8
+   },
+   {
+    "id": "s10",
+    "lane": "s",
+    "label": "库存转已售<br/>(TCC-Confirm)",
+    "col": 9,
+    "color": "green"
+   },
+   {
+    "id": "s11",
+    "lane": "u",
+    "label": "评价 + 复购",
+    "col": 10,
+    "color": "orange"
+   },
+   {
+    "id": "s12",
+    "lane": "o",
+    "label": "对账 / 结算",
+    "col": 11,
+    "color": "grey"
+   }
+  ],
+  "edges": [
+   [
+    "s1",
+    "s2"
+   ],
+   [
+    "s2",
+    "s3"
+   ],
+   [
+    "s3",
+    "s4"
+   ],
+   [
+    "s4",
+    "s5"
+   ],
+   [
+    "s5",
+    "s6"
+   ],
+   [
+    "s6",
+    "s7"
+   ],
+   [
+    "s7",
+    "s8"
+   ],
+   [
+    "s8",
+    "s9"
+   ],
+   [
+    "s9",
+    "s10"
+   ],
+   [
+    "s10",
+    "s11"
+   ],
+   [
+    "s9",
+    "s12"
+   ]
+  ]
+ }
+}

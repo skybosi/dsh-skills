@@ -24,6 +24,7 @@ whenToUse: 用户要**画图/生成图表**时先加载本 skill：结构图（�
 | 用户**只给描述**（"把这段流程画出来""多组实验的波动"） | `--recommend "<描述>"` → 取第 1 个候选；第 2、3 个作为备选 |
 | 描述跨了好几个场景 / 你拿不准 | `--list`（14 个分类）扫一眼，再 `--recommend` 收窄 |
 | 需要程序化选型 | `--catalog --json`（含分类、关键词、参数键、示例 spec 路径） |
+| 要写**技术方案文档**（复杂业务流程 / 分层架构 / 跨系统职责） | `--example tech-flow` · `--example tech-arch` · `--example tech-swimlane` —— `specs/templates/` 里的**完整真实方案图**，直接抄改 |
 
 ```bash
 S=<本 skill 目录>/scripts/draw.py
@@ -62,6 +63,7 @@ python3 $S --doctor                               # 自检依赖（缺什么/怎
 python3 $S --list                                 # 按场景分类列出全部图型
 python3 $S --recommend "一句话描述"                 # 选型 + 输出可跑骨架
 python3 $S --example grouped_bar > spec.json      # 打真实骨架 → 改参数即可
+python3 $S --example tech-flow > spec.json        # 也可以拿「方案模板」：复杂业务流程 / 分层架构 / 泳道图
 python3 $S spec.json                              # 出图（默认 out/<id>.svg）
 python3 $S spec.json -o out/fig.png               # 格式由**扩展名**决定：svg/png/webp/pdf/eps/jpeg/tiff
 python3 $S spec.json --check                      # 版式检查当红线（不过关 → 退出码 1）
@@ -208,7 +210,8 @@ python3 $S --batch specs/                         # 批量：把目录下所有 
 | 重生成样例 | `python3 scripts/build_examples.py`（写 `docs/examples/*.svg`） |
 | 改配色 | 改 `scripts/style.py` 的 `_PAPER_TINT`（或 `_shade` 的 `l_factor`）→ 两类图一起变；然后重生成样例与文档 |
 | 重生成文档 | `python3 scripts/build_docs.py`（写 `TYPES.md` + 刷新 `README.md` 画廊）。⚠️ 改过 `catalog.py`（分类/关键词/示例）后**必须重跑**，否则生成类文档会与代码漂移 |
-| 回归自测 | `python3 scripts/draw.py --batch specs/ --check`（98 个示例 spec 应全绿） |
+| 回归自测 | `python3 scripts/draw.py --batch specs/ --check`（98 个示例 spec 应全绿；`specs/templates/` 不在批量范围内） |
+| 文档漂移自检 | `python3 scripts/draw.py --check-docs`（比对 TYPES.md / README.md 与 `catalog.py`，不一致退出码 1；`--doctor` 里也会报） |
 
 ## 当前状态
 

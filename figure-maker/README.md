@@ -16,6 +16,7 @@ python3 $S --doctor                                # 先自检依赖（缺什么
 python3 $S --recommend "画个接口调用顺序"            # 选型：按描述推荐图型 + 给可跑骨架
 python3 $S --list                                  # 按 14 个场景分类列出全部图型
 python3 $S --example km > spec.json                # 打某个图型的真实骨架
+python3 $S --example tech-flow > spec.json         # 技术方案模板：复杂业务流程 / 分层架构 / 泳道图
 python3 $S spec.json -o out/fig.webp               # 出图（格式由扩展名决定）
 python3 $S spec.json --check                       # 版式检查当红线（不过关退出码 1）
 python3 $S --batch specs/                          # 批量出图（仓库自带 73 个示例 spec）
