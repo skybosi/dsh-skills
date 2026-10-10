@@ -150,8 +150,10 @@ const LAYOUT_TIPS = {
 /** 扫 mmd 里几类「一定会在图上变成乱码/噪音」的写法，提前给提示（不是错误，不阻断渲染） */
 function scanHints(mmd) {
   const hints = [];
-  // 先把 %%{init}%% 与 %% 行注释去掉：注释里的东西不会渲染，不该产生提示
-  const src = String(mmd).replace(/%%\{[\s\S]*?\}%%/g, '').replace(/^\s*%%.*$/gm, '');
+  // 先把 %%{init}%% 与 %% 行注释、以及 classDef/class/style/linkStyle 这些**配置行**去掉：
+  // 它们不会作为文字渲染，里面的 #RRGGBB 是正常配色 —— 否则 `color:#212529;` 会被误判成实体码 #35;
+  const src = String(mmd).replace(/%%\{[\s\S]*?\}%%/g, '').replace(/^\s*%%.*$/gm, '')
+    .split('\n').filter((l) => !/^\s*(classDef|class|style|linkStyle|click)\b/.test(l)).join('\n');
   if (/&#\d+;|&#x[0-9A-Fa-f]+;/.test(src))
     hints.push('标签里出现了 HTML 风格数字实体（如 &#35;）：本渲染器用 htmlLabels:false，实体不会被解码，图上会**原样**显示成 &#35; —— 想写 # 直接写 # 即可');
   if (/(?:^|[^\w&])#\d+;/.test(src))
@@ -249,42 +251,50 @@ async function renderMermaid(mmd, opts = {}) {
         '.marker path,.marker polygon{fill:#6B7280!important;stroke:#6B7280!important;}';
       svgEl.setAttribute('xmlns', SVGNS);
 
-      // ---- 标题（站点/端上直接显示 SVG，标题必须画进图里；规范里「标题不进 Mermaid」照旧遵守）
-      //      ⚠️ 关键修复：以前注入标题时把 viewBox 强制改成 `0 0 W H+titleH`，**丢掉了原始原点**。
-      //      而 Mermaid 给不少图型（时序图 -50,-10；architecture-beta -276,-65；kanban 90,-310）
-      //      用的是负原点坐标系 —— 结果带标题的架构图被裁掉左边节点、看板直接变成空白。
-      //      现在改为「按标题高度向上扩画布」，原点只按居中偏移量平移，永不裁内容。
-      const vb = svgEl.viewBox.baseVal;
-      const vbX = vb.x, vbY = vb.y, W = vb.width, H = vb.height;
-      let canvasX = vbX, canvasY = vbY, canvasW = W, canvasH = H;
-      if (title) {
-        const titleH = 34;
-        await document.fonts.ready;
-        const g = document.createElementNS(SVGNS, 'g');
-        while (svgEl.firstChild) g.appendChild(svgEl.firstChild);
-        svgEl.appendChild(g);
-        const t = document.createElementNS(SVGNS, 'text');
-        t.setAttribute('x', '0'); t.setAttribute('y', '0');
-        t.setAttribute('text-anchor', 'middle');
-        t.setAttribute('font-family', fontStack);
-        t.setAttribute('font-size', '16');
-        t.setAttribute('font-weight', 'bold');
-        t.setAttribute('fill', '#212529');
-        t.setAttribute('id', 'fig-title');   // ⚠️ 必须给 id：htmlLabels=false 时节点标签也是 <text>
-        t.textContent = title;
-        svgEl.appendChild(t);
-        const tw = (t.getComputedTextLength ? t.getComputedTextLength() : t.getBBox().width) || 0;
-        const margin = 24;
-        canvasW = Math.max(W, Math.ceil(tw + margin * 2));
-        const dx = Math.round((canvasW - W) / 2);
-        g.setAttribute('transform', `translate(${dx},0)`);
-        canvasX = vbX - dx;                       // 向左扩，内容水平居中
-        canvasY = vbY - titleH;                   // 向上扩出标题行
-        canvasH = H + titleH;
-        t.setAttribute('x', String(canvasX + canvasW / 2));
-        t.setAttribute('y', String(canvasY + 22));
+      // ---- 画布归一化 + 标题：**以内容真实 bbox 为中心重建画布**
+      //  ⚠️ 千万别拿 Mermaid 的 viewBox 当画布基准：它的留白左右并不对称
+      //     （实测 ladder 左 20px / 右 231px，flow 更夸张）—— 照它居中的结果就是内容明显偏右。
+      //  正确做法：把内容包进 <g>，用 getBBox() 量出**内容真实外框**，再按
+      //     「宽度 = max(内容宽, 标题宽) + 2×margin、高度 = 内容高 + 标题行 + 2×margin」
+      //  重建画布并把原点归一到 (0,0)：内容永远水平居中，负原点图型（时序图 / architecture-beta /
+      //  kanban）也因此天然正确。
+      await document.fonts.ready;
+      const MARGIN = 10, TITLE_H = title ? 34 : 0;
+      const g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('id', 'fig-content');
+      while (svgEl.firstChild) g.appendChild(svgEl.firstChild);
+      svgEl.appendChild(g);
+      let cb = null;
+      try { cb = g.getBBox(); } catch (e) { cb = null; }
+      if (!cb || !(cb.width > 0) || !(cb.height > 0)) {          // 兜底：量不到就用 viewBox
+        const vb0 = svgEl.viewBox.baseVal;
+        cb = { x: vb0.x, y: vb0.y, width: vb0.width, height: vb0.height };
       }
-      svgEl.setAttribute('viewBox', `${canvasX} ${canvasY} ${canvasW} ${canvasH}`);
+      let titleEl = null, tw = 0;
+      if (title) {
+        titleEl = document.createElementNS(SVGNS, 'text');
+        titleEl.setAttribute('text-anchor', 'middle');
+        titleEl.setAttribute('font-family', fontStack);
+        titleEl.setAttribute('font-size', '16');
+        titleEl.setAttribute('font-weight', 'bold');
+        titleEl.setAttribute('fill', '#212529');
+        titleEl.setAttribute('id', 'fig-title');   // ⚠️ 必须给 id：htmlLabels=false 时节点标签也是 <text>
+        titleEl.textContent = title;
+        svgEl.appendChild(titleEl);
+        try { tw = titleEl.getComputedTextLength() || 0; } catch (e) { tw = 0; }
+        if (!tw) { try { tw = titleEl.getBBox().width || 0; } catch (e) { tw = 0; } }
+      }
+      let canvasW = Math.ceil(Math.max(cb.width, tw) + MARGIN * 2);
+      let canvasH = Math.ceil(cb.height + TITLE_H + MARGIN * 2);
+      const contentDx = (canvasW - cb.width) / 2 - cb.x;         // 内容水平居中
+      const contentDy = TITLE_H + MARGIN - cb.y;
+      g.setAttribute('transform', `translate(${contentDx.toFixed(2)},${contentDy.toFixed(2)})`);
+      if (titleEl) {
+        titleEl.setAttribute('x', String(Math.round(canvasW / 2)));
+        titleEl.setAttribute('y', String(Math.round(TITLE_H / 2 + 6)));
+      }
+      const canvasX = 0, canvasY = 0;
+      svgEl.setAttribute('viewBox', `0 0 ${canvasW} ${canvasH}`);
       svgEl.setAttribute('width', canvasW);
       svgEl.setAttribute('height', canvasH);
       // 规范要求「背景纯白」：显式插一块白底（id 不是 class，不会被上面那套清理规则命中），

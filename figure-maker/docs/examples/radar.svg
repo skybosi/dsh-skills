@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-10-10T09:00:00.612488</dc:date>
+    <dc:date>2026-10-10T09:06:18.410070</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -72,7 +72,7 @@ z
      <g id="line2d_1">
       <path d="M 288 156.7154 
 L 288 47 
-" clip-path="url(#pbdde2a79b5)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
+" clip-path="url(#p2db9b9652b)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
      </g>
      <g id="text_1">
       <!-- 准确率 -->
@@ -298,7 +298,7 @@ z
      <g id="line2d_2">
       <path d="M 288 156.7154 
 L 392.345546 122.811477 
-" clip-path="url(#pbdde2a79b5)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
+" clip-path="url(#p2db9b9652b)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
      </g>
      <g id="text_2">
       <!-- 召回率 -->
@@ -377,7 +377,7 @@ z
      <g id="line2d_3">
       <path d="M 288 156.7154 
 L 352.489094 245.477023 
-" clip-path="url(#pbdde2a79b5)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
+" clip-path="url(#p2db9b9652b)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
      </g>
      <g id="text_3">
       <!-- F1 -->
@@ -417,7 +417,7 @@ z
      <g id="line2d_4">
       <path d="M 288 156.7154 
 L 223.510906 245.477023 
-" clip-path="url(#pbdde2a79b5)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
+" clip-path="url(#p2db9b9652b)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
      </g>
      <g id="text_4">
       <!-- 推理速度 -->
@@ -707,7 +707,7 @@ z
      <g id="line2d_5">
       <path d="M 288 156.7154 
 L 183.654454 122.811477 
-" clip-path="url(#pbdde2a79b5)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
+" clip-path="url(#p2db9b9652b)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
      </g>
      <g id="text_5">
       <!-- 显存友好度 -->
@@ -913,7 +913,7 @@ C 260.57115 153.113476 261.28065 149.546577 262.659047 146.218834
 C 264.037443 142.89109 266.05793 139.867219 268.604874 137.320274 
 C 271.151819 134.77333 274.17569 132.752843 277.503434 131.374447 
 C 280.831177 129.99605 284.398076 129.28655 288 129.28655 
-" clip-path="url(#pbdde2a79b5)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
+" clip-path="url(#p2db9b9652b)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
      </g>
     </g>
     <g id="ytick_2">
@@ -935,7 +935,7 @@ C 233.1423 149.511553 234.561301 142.377754 237.318094 135.722267
 C 240.074887 129.06678 244.115859 123.019038 249.209748 117.925148 
 C 254.303638 112.831259 260.35138 108.790287 267.006867 106.033494 
 C 273.662354 103.276701 280.796153 101.8577 288 101.8577 
-" clip-path="url(#pbdde2a79b5)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
+" clip-path="url(#p2db9b9652b)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
      </g>
     </g>
     <g id="ytick_3">
@@ -957,7 +957,7 @@ C 205.71345 145.909629 207.841951 135.208931 211.977141 125.225701
 C 216.11233 115.24247 222.173789 106.170856 229.814622 98.530022 
 C 237.455456 90.889189 246.52707 84.82773 256.510301 80.692541 
 C 266.493531 76.557351 277.194229 74.42885 288 74.42885 
-" clip-path="url(#pbdde2a79b5)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
+" clip-path="url(#p2db9b9652b)" style="fill: none; stroke-dasharray: 2.96,1.28; stroke-dashoffset: 0; stroke: #f1f3f5; stroke-width: 0.8"/>
      </g>
     </g>
    </g>
@@ -968,7 +968,7 @@ L 346.040185 236.600861
 L 258.979908 196.65813 
 L 246.261782 143.153831 
 z
-" clip-path="url(#pbdde2a79b5)" style="fill: #9ca3af; opacity: 0.16; stroke: #9ca3af; stroke-linejoin: miter"/>
+" clip-path="url(#p2db9b9652b)" style="fill: #9ca3af; opacity: 0.16; stroke: #9ca3af; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 288 56.874386 
@@ -977,7 +977,7 @@ L 345.395294 235.713245
 L 242.857634 218.848536 
 L 220.175395 134.67785 
 z
-" clip-path="url(#pbdde2a79b5)" style="fill: #93c5fd; opacity: 0.16; stroke: #93c5fd; stroke-linejoin: miter"/>
+" clip-path="url(#p2db9b9652b)" style="fill: #93c5fd; opacity: 0.16; stroke: #93c5fd; stroke-linejoin: miter"/>
    </g>
    <g id="patch_5">
     <path d="M 288 60.165848 
@@ -986,7 +986,7 @@ L 343.460621 233.050396
 L 226.735361 241.038942 
 L 192.002098 125.523791 
 z
-" clip-path="url(#pbdde2a79b5)" style="fill: #86efac; opacity: 0.16; stroke: #86efac; stroke-linejoin: miter"/>
+" clip-path="url(#p2db9b9652b)" style="fill: #86efac; opacity: 0.16; stroke: #86efac; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
     <path d="M 288 47 
@@ -1015,7 +1015,7 @@ L 346.040185 236.600861
 L 258.979908 196.65813 
 L 246.261782 143.153831 
 L 288 55.777232 
-" clip-path="url(#pbdde2a79b5)" style="fill: none; stroke: #9ca3af; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p2db9b9652b)" style="fill: none; stroke: #9ca3af; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="line2d_10">
     <path d="M 288 56.874386 
@@ -1024,7 +1024,7 @@ L 345.395294 235.713245
 L 242.857634 218.848536 
 L 220.175395 134.67785 
 L 288 56.874386 
-" clip-path="url(#pbdde2a79b5)" style="fill: none; stroke: #93c5fd; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p2db9b9652b)" style="fill: none; stroke: #93c5fd; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="line2d_11">
     <path d="M 288 60.165848 
@@ -1033,7 +1033,7 @@ L 343.460621 233.050396
 L 226.735361 241.038942 
 L 192.002098 125.523791 
 L 288 60.165848 
-" clip-path="url(#pbdde2a79b5)" style="fill: none; stroke: #86efac; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p2db9b9652b)" style="fill: none; stroke: #86efac; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="text_6">
     <!-- 量程 0–100 -->
@@ -2462,7 +2462,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="pbdde2a79b5">
+  <clipPath id="p2db9b9652b">
    <path d="M 397.7154 156.7154 
 C 397.7154 142.307706 394.877398 128.040108 389.363812 114.729134 
 C 383.850227 101.41816 375.768282 89.322675 365.580503 79.134897 
